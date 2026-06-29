@@ -30,15 +30,21 @@ It is an engineering framework used to develop high-quality software with AI ass
 # Repository Structure
 
 ```text
-01_Rules/          Engineering standards
+01_Rules/          Engineering rules and standards
 
-02_Prompts/        AI prompts
+02_Policies/       Governance policies
 
-03_Templates/      Project templates
+03_Templates/      Reusable engineering templates
 
-Projects/          Real software projects
+04_Prompts/        Reusable AI prompts
 
-Tools/             Scripts and utilities
+05_Projects/       Project templates and real projects
+
+06_Tools/          Helper tools and automation
+
+07_Docs/           Repository documentation
+
+08_Examples/       Sample projects and reference examples
 
 .claude/           Claude configuration
 
