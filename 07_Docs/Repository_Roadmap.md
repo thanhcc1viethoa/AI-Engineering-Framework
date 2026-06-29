@@ -62,11 +62,11 @@ The repository is organized by responsibility, following the structure defined i
 
 | Phase | Focus              | Key Artifacts                                                            | Status      |
 | ----- | ------------------ | ----------------------------------------------------------------------- | ----------- |
-| P1    | Foundation Rules   | `Global.md`                                                             | Approved    |
-| P2    | Policies           | `Versioning_Policy.md`, `Naming_Policy.md`, `Repository_Governance.md`  | Approved    |
-| P3    | Templates          | `Requirement.md`, `Architecture.md`, `ADR.md`, `Review_Form.md`, `Review_Report.md`, `Artifact_Revision_Request.md` | Approved |
-| P4    | Prompt Standards   | `Create_Prompt.md`, `Review_Prompt.md`, `Revision_Prompt.md`            | Approved    |
-| P5    | Documentation      | `Repository_Roadmap.md`                                                 | In Progress |
+| P1    | Foundation Rules   | `Global.md`                                                             | Frozen      |
+| P2    | Policies           | `Versioning_Policy.md`, `Naming_Policy.md`, `Repository_Governance.md`  | Frozen      |
+| P3    | Templates          | `Requirement.md`, `Architecture.md`, `ADR.md`, `Review_Form.md`, `Review_Report.md`, `Artifact_Revision_Request.md` | Frozen |
+| P4    | Prompt Standards   | `Create_Prompt.md`, `Review_Prompt.md`, `Revision_Prompt.md`            | Frozen      |
+| P5    | Documentation      | `Repository_Roadmap.md`, `Repository_Audit_Report.md`, `ADR-0001`       | Complete    |
 | P6    | Projects           | `05_Projects`                                                           | Planned     |
 | P7    | Tools              | `06_Tools`                                                              | Planned     |
 | P8    | Examples           | `08_Examples`                                                           | Planned     |
@@ -79,20 +79,22 @@ Status reflects the approved foundation as of this roadmap version.
 
 | Artifact                  | Category | Path                                       | Version | Status      |
 | ------------------------- | -------- | ------------------------------------------ | ------- | ----------- |
-| Global Engineering Rules  | Rule     | `01_Rules/Global.md`                       | 2.0.0   | Approved    |
+| Global Engineering Rules  | Rule     | `01_Rules/Global.md`                       | 2.0.1   | Approved    |
 | Versioning Policy         | Policy   | `02_Policies/Versioning_Policy.md`         | 1.1.0   | Approved    |
 | Naming Policy             | Policy   | `02_Policies/Naming_Policy.md`             | 1.0.0   | Approved    |
 | Repository Governance     | Policy   | `02_Policies/Repository_Governance.md`     | 1.1.0   | Approved    |
 | Requirement               | Template | `03_Templates/Requirement.md`              | 1.1.1   | Approved    |
 | Architecture              | Template | `03_Templates/Architecture.md`             | 1.1.0   | Approved    |
 | ADR                       | Template | `03_Templates/ADR.md`                      | 1.1.0   | Approved    |
-| Review Form               | Template | `03_Templates/Review_Form.md`              | 1.0.0   | Approved    |
+| Review Form               | Template | `03_Templates/Review_Form.md`              | 1.0.1   | Approved    |
 | Review Report             | Template | `03_Templates/Review_Report.md`            | 1.1.0   | Approved    |
 | Artifact Revision Request | Template | `03_Templates/Artifact_Revision_Request.md`| 1.2.0   | Approved    |
 | Create Prompt             | Prompt   | `04_Prompts/Create_Prompt.md`              | 1.1.0   | Approved    |
 | Review Prompt             | Prompt   | `04_Prompts/Review_Prompt.md`              | 1.2.0   | Approved    |
 | Revision Prompt           | Prompt   | `04_Prompts/Revision_Prompt.md`            | 1.2.0   | Approved    |
 | Repository Roadmap        | Document | `07_Docs/Repository_Roadmap.md`            | 1.0.0   | Draft       |
+| Repository Audit Report   | Document | `07_Docs/Repository_Audit_Report.md`       | 1.0.0   | Final       |
+| ADR-0001 Foundation Frozen| ADR      | `07_Docs/ADR-0001-Repository-Foundation-Frozen.md` | 1.0.0 | Accepted |
 
 ---
 
@@ -118,8 +120,9 @@ Artifacts shall be developed and maintained in dependency order. A dependent art
 | M2        | Canonical templates approved                 | Complete    |
 | M3        | Prompt standards approved                    | Complete    |
 | M4        | Repository governance approved               | Complete    |
-| M5        | Documentation layer published                | In Progress |
+| M5        | Documentation layer published                | Complete    |
 | M5.5      | Repository audit completed                   | Complete    |
+| M5.7      | Foundation frozen (ADR-0001)                 | Complete    |
 | M6        | First project instance established           | Planned     |
 | M7        | Tooling and automation introduced            | Planned     |
 | M8        | Worked examples published                    | Planned     |

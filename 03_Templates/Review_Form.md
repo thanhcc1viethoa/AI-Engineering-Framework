@@ -293,6 +293,7 @@ The artifact **cannot be approved** unless every threshold below is met:
 
 # Version History
 
-| Version | Date       | Reviewer | Result | Notes                 |
-|---------|------------|----------|--------|-----------------------|
-| 1.0.0   | 2026-06-29 |          |        | Initial review form   |
+| Version | Date       | Author | Notes               |
+|---------|------------|--------|---------------------|
+| 1.0.0   | 2026-06-29 |        | Initial review form |
+| 1.0.1   | 2026-06-29 |        | Standardized version history columns to Author / Notes (audit finding A-001) |

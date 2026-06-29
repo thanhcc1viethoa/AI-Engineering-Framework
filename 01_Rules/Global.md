@@ -191,8 +191,9 @@ Exceptions shall not relax mandatory security or governance requirements, and sh
 
 # Version History
 
-| Version | Date       | Author | Summary                                                                 |
+| Version | Date       | Author | Notes                                                                   |
 |---------|------------|--------|-------------------------------------------------------------------------|
 | 1.0.0   | 2026-06-29 | —      | Initial global engineering rules                                        |
 | 1.1.0   | 2026-06-29 | —      | Added Change Scope, Decision Records, Context Management, Token Optimization, Dependency Management, and Versioning Policy sections |
 | 2.0.0   | 2026-06-29 | —      | Restructured into repository-wide baseline rules; moved Versioning Policy to `Versioning_Policy.md` and Decision Records to `ADR.md` by reference; preserved all baseline rules without an owning policy (Migration: versioning and decision-record details now live in their owning artifacts) |
+| 2.0.1   | 2026-06-29 | —      | Standardized version history column header to Notes (audit finding A-002) |
