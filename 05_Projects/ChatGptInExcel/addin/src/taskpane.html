@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ChatGPT in Excel</title>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <link rel="stylesheet" href="/taskpane.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="header">
+        <h1>ChatGPT in Excel</h1>
+        <p id="status">Loading Excel...</p>
+      </header>
+
+      <section class="panel">
+        <label for="prompt">Prompt</label>
+        <textarea id="prompt" rows="7" placeholder="Ask about the selected cells..."></textarea>
+        <div class="actions">
+          <button id="read-selection" type="button">Read selection</button>
+          <button id="copy-prompt" type="button">Copy prompt</button>
+          <button id="open-chatgpt" type="button">Open ChatGPT</button>
+          <button id="insert-response" type="button">Insert response</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <label for="response">Response</label>
+        <textarea id="response" rows="7" placeholder="Provider integration is pending. You can test Excel read/write first."></textarea>
+      </section>
+
+      <section class="notice">
+        Chọn ô trong Excel, bấm Read selection, copy prompt sang ChatGPT, rồi dán câu trả lời vào Response để chèn lại vào sheet.
+      </section>
+    </main>
+    <script src="/taskpane.js"></script>
+  </body>
+</html>
