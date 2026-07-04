@@ -40,15 +40,17 @@ It is an engineering framework used to develop high-quality software with AI ass
 
 05_Projects/       Project templates and real projects
 
-06_Tools/          Helper tools and automation
+06_Tools/          Automation tooling (governance-check.js)
 
 07_Docs/           Repository documentation
 
-08_Examples/       Sample projects and reference examples
+08_Examples/       Worked examples (full /create → /review → /revise cycle)
 
-.claude/           Claude configuration
+.claude/           Claude Code commands (/create, /review, /revise)
 
-.codex/            Codex configuration
+.codex/            Codex configuration (reserved)
+
+.github/           CI workflows (governance check on push / pull request)
 ```
 
 ---
@@ -80,6 +82,24 @@ Documentation
 ↓
 
 Release
+
+---
+
+# Tooling
+
+The workflow is executable, not only documented.
+
+| Entry point                  | What it does                                                        |
+| ----------------------------- | -------------------------------------------------------------------- |
+| `/create` (Claude Code)       | Creates one artifact per `04_Prompts/Create_Prompt.md`               |
+| `/review` (Claude Code)       | Reviews an artifact against the Quality Gate per `04_Prompts/Review_Prompt.md` |
+| `/revise` (Claude Code)       | Applies an approved Artifact Revision Request per `04_Prompts/Revision_Prompt.md` |
+| `npm run governance:check`    | Mechanically enforces rules already defined in `01_Rules/` and `02_Policies/` (exit 0 clean / 1 violations / 2 tool failure) |
+| GitHub Actions                | Runs the governance check on every push and pull request to `main`   |
+
+A complete worked example of the cycle (including an honest first-review failure) lives in `08_Examples/Governance_Check_Tool/`.
+
+Agent context for Claude Code sessions is provided by `CLAUDE.md` at the repository root.
 
 ---
 
