@@ -4,7 +4,8 @@
   "description": "Enterprise AI Engineering Framework for Office Add-ins and AI Agents",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "governance:check": "node 06_Tools/governance-check.js"
   },
   "repository": {
     "type": "git",
@@ -12,7 +13,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/thanhcc1viethoa/AI-Engineering-Framework/issues"
