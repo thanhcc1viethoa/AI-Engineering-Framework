@@ -1,0 +1,37 @@
+{
+  "name": "may_dap_xe_ep05",
+  "sources": ["source/dap_xe_goc.mp4"],
+  "assets": {
+    "character": "assets/character",
+    "outfit": "assets/outfit",
+    "accessories": "assets/accessories",
+    "prop": "assets/bike",
+    "background": "assets/background"
+  },
+  "subject_in_source": "the cyclist",
+  "prop_label": "bicycle",
+  "background_prompt": "a quiet tree-lined street in Ho Chi Minh City at 6 am, soft morning sun",
+  "identity_lock": "Use the attached reference image as the same character. Keep her exact face, skin tone, hairstyle and body proportions identical.",
+  "end_lock": "Same character as the reference, do not change her face or hair. Photorealistic, natural light, shot on smartphone, 9:16 vertical.",
+  "anchor_segment": 1,
+  "max_ingredients": 5,
+  "segmenting": {
+    "max_segment_seconds": 8,
+    "overlap_seconds": 0.5,
+    "scene_threshold": 0.4,
+    "min_segment_seconds": 1.0
+  },
+  "output": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "fit": "crop",
+    "color_match": true,
+    "audio": "source",
+    "max_stretch": 1.15
+  },
+  "qc": {
+    "consistency_min": 0.6,
+    "seam_max": 0.12
+  }
+}
