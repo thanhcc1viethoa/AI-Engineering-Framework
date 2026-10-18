@@ -28,6 +28,10 @@ Flow/Omni chỉ sửa được đoạn ngắn (~10 giây) mỗi lần, và mỗi
 
 ## Giao diện (khuyên dùng)
 
+**Cách dễ nhất:** bấm đúp `Start-MotionCopyUI.bat` (ở thư mục `MotionCopyVideo`). File này tự kiểm tra Python và ffmpeg, hỏi để cài nếu thiếu, rồi mở giao diện. Dự án lưu ở `D:\Video\MotionCopy` (hoặc `Videos\MotionCopy` nếu máy không có ổ D). Giữ cửa sổ đen mở trong lúc dùng.
+
+Hoặc từ PowerShell:
+
 ```powershell
 cd 05_Projects\MotionCopyVideo\motion_copy
 .\Start-MotionCopyUI.ps1
