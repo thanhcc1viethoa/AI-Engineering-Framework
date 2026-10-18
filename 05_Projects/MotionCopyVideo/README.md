@@ -51,7 +51,7 @@ Dòng lệnh bên dưới vẫn dùng được và cho kết quả giống hệt
 ## Cài đặt (Windows)
 
 1. Cài ffmpeg: `winget install Gyan.FFmpeg` (mở lại PowerShell).
-2. Cài Python 3.11+.
+2. Cài Python 3.10 trở lên.
 3. Lần chạy đầu `Start-MotionCopy.ps1` tự tạo `.venv` và cài `requirements.txt`.
 
 ## Chuẩn bị thư mục làm việc (ngoài repo)

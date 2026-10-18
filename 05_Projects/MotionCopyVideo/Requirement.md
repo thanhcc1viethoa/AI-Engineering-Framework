@@ -95,7 +95,7 @@ Produce long "motion copy" videos with Google Flow (Gemini Omni): replace the pe
 
 | ID      | Requirement | Target |
 | ------- | ----------- | ------ |
-| NFR-001 | Portability | Runs on Windows with non-ASCII (Vietnamese) paths; ffmpeg + Python 3.11+ |
+| NFR-001 | Portability | Runs on Windows with non-ASCII (Vietnamese) paths; ffmpeg + Python 3.10+ |
 | NFR-002 | Determinism | Same inputs and config produce the same plan and job sheet |
 | NFR-003 | Fail loudly | Errors print one clear line; exit codes 0 = ok, 1 = clips need attention, 2 = error |
 | NFR-004 | Dependencies | Only numpy and opencv-python-headless, pinned in `requirements.txt` |
