@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Motion Copy Video</title>
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #6b7385; --line: #e2e5eb;
+  --accent: #2f6fed; --accent-soft: #e8f0ff; --ok: #1f9d55; --ok-soft: #e3f6eb;
+  --warn: #c77700; --warn-soft: #fff3dc; --bad: #d64545; --bad-soft: #fde8e8;
+  --flow: #7a4ddb; --flow-soft: #f1ebff; --radius: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12151b; --panel: #1b1f27; --text: #e7eaf0; --muted: #98a0b3; --line: #2c323e;
+    --accent: #6b9bff; --accent-soft: #1f2b45; --ok: #3ecf7f; --ok-soft: #173326;
+    --warn: #f2a93b; --warn-soft: #3a2c14; --bad: #ff7a7a; --bad-soft: #3d1f1f;
+    --flow: #a888ff; --flow-soft: #2a2242;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px/1.5 system-ui, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+  padding: 14px 20px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+header h1 { font-size: 18px; margin: 0; }
+header h1 span { color: var(--muted); font-weight: 400; font-size: 14px; margin-left: 6px; }
+main { max-width: 1240px; margin: 0 auto; padding: 18px 16px 80px; }
+select, input, textarea, button { font: inherit; color: inherit; }
+header select { width: auto; min-width: 200px; }
+@media (max-width: 760px) { header { position: static; } }
+select, input[type=text], textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; width: 100%; }
+textarea { resize: vertical; min-height: 70px; }
+button { cursor: pointer; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 7px 14px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.muted { color: var(--muted); font-size: 13px; }
+a { color: var(--accent); }
+
+/* workflow diagram */
+.flow { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; margin: 4px 0 18px; }
+.node { position: relative; text-align: center; padding: 0 6px; cursor: pointer; }
+.node::after { content: ""; position: absolute; top: 22px; left: calc(50% + 24px); right: calc(-50% + 24px);
+  height: 2px; background: var(--line); }
+.node:last-child::after { display: none; }
+.node.done::after { background: var(--ok); }
+.dot { width: 44px; height: 44px; margin: 0 auto 6px; border-radius: 50%; display: grid; place-items: center;
+  font-weight: 700; border: 2px solid var(--line); background: var(--panel); color: var(--muted); }
+.node.flowstep .dot { border-style: dashed; border-color: var(--flow); color: var(--flow); }
+.node.done .dot { background: var(--ok); border: 2px solid var(--ok); color: #fff; }
+.node.current .dot { border: 3px solid var(--accent); color: var(--accent); box-shadow: 0 0 0 5px var(--accent-soft); }
+.node .label { font-size: 13px; font-weight: 600; }
+.node .sub { font-size: 11px; color: var(--muted); }
+.node.flowstep .sub { color: var(--flow); }
+@media (max-width: 760px) {
+  .flow { grid-template-columns: 1fr; gap: 6px; }
+  .node { display: flex; align-items: center; gap: 10px; text-align: left; }
+  .node::after { display: none; }
+  .dot { margin: 0; flex: none; width: 36px; height: 36px; }
+}
+
+/* sections */
+section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; }
+section h2 { margin: 0 0 4px; font-size: 17px; display: flex; gap: 10px; align-items: center; }
+section h2 .num { width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent);
+  display: inline-grid; place-items: center; font-size: 13px; }
+section > .muted { margin: 0 0 14px; }
+
+/* drop zones */
+.drops { display: grid; grid-template-columns: 2fr repeat(5, 1fr); gap: 12px; }
+@media (max-width: 1000px) { .drops { grid-template-columns: repeat(2, 1fr); } }
+.drop { border: 2px dashed var(--line); border-radius: 10px; padding: 10px; min-height: 160px; display: flex; flex-direction: column;
+  transition: border-color .15s, background .15s; }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop h3 { margin: 0; font-size: 14px; }
+.drop .hint { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.drop .pick { margin-top: auto; font-size: 13px; }
+.thumbs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.thumb { position: relative; width: 64px; height: 64px; border-radius: 6px; overflow: hidden; background: var(--bg); border: 1px solid var(--line); }
+.thumb img, .thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb.video { width: 100%; height: auto; aspect-ratio: auto; }
+.thumb.video video { max-height: 160px; object-fit: contain; background: #000; }
+.thumb .x { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; padding: 0; border-radius: 50%;
+  background: rgba(0,0,0,.6); color: #fff; border: 0; font-size: 12px; line-height: 20px; }
+.thumb .cap { position: absolute; left: 0; right: 0; bottom: 0; font-size: 10px; background: rgba(0,0,0,.55); color: #fff;
+  padding: 1px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.progress { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin-bottom: 6px; display: none; }
+.progress > div { height: 100%; background: var(--accent); width: 0; }
+
+.settings { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+.settings label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px; }
+.settings .wide { grid-column: span 3; }
+@media (max-width: 760px) { .settings { grid-template-columns: 1fr; } .settings .wide { grid-column: span 1; } }
+
+/* segment cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.card.anchor { border: 2px solid var(--flow); }
+.card header { all: unset; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.card h3 { margin: 0; font-size: 15px; }
+.badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--bg); color: var(--muted); }
+.badge.PASS { background: var(--ok-soft); color: var(--ok); }
+.badge.CHECK { background: var(--warn-soft); color: var(--warn); }
+.badge.MISSING, .badge.todo { background: var(--bad-soft); color: var(--bad); }
+.badge.anchor { background: var(--flow-soft); color: var(--flow); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pair .slot { display: flex; flex-direction: column; gap: 4px; }
+.pair .slot span { font-size: 12px; color: var(--muted); }
+.pair video { width: 100%; aspect-ratio: 9/16; max-height: 300px; background: #000; border-radius: 6px; object-fit: contain; }
+.outdrop { aspect-ratio: 9/16; max-height: 300px; border: 2px dashed var(--flow); border-radius: 6px; display: grid; place-items: center;
+  text-align: center; font-size: 12px; color: var(--flow); background: var(--flow-soft); padding: 8px; cursor: pointer; }
+.outdrop.over { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.ingredients { display: flex; gap: 6px; flex-wrap: wrap; }
+.ingredients a { position: relative; width: 52px; height: 52px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); display: block; }
+.ingredients img { width: 100%; height: 100%; object-fit: cover; }
+.ingredients b { position: absolute; top: 0; left: 0; background: var(--flow); color: #fff; font-size: 11px; padding: 0 5px; border-bottom-right-radius: 6px; }
+.prompt { font: 12px/1.45 ui-monospace, Consolas, monospace; min-height: 120px; }
+.issues { font-size: 12px; color: var(--warn); }
+.step-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.contact img { max-width: min(100%, 560px); border-radius: 8px; border: 1px solid var(--line); cursor: zoom-in; }
+.final video { width: 100%; max-width: 420px; background: #000; border-radius: 8px; }
+
+/* task bar */
+#taskbar { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); max-width: 92vw; padding: 10px 16px;
+  border-radius: 10px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 6px 24px rgba(0,0,0,.15);
+  display: none; align-items: center; gap: 10px; z-index: 10; font-size: 14px; }
+#taskbar.show { display: flex; }
+#taskbar.error { border-color: var(--bad); color: var(--bad); }
+#taskbar.ok { border-color: var(--ok); }
+.spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty { text-align: center; padding: 50px 20px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Motion Copy Video <span>Flow → ghép video dài, giữ nhân vật xuyên suốt</span></h1>
+  <div class="row">
+    <select id="projectSelect" aria-label="Dự án"></select>
+    <button id="newProject">+ Dự án mới</button>
+  </div>
+</header>
+
+<main id="app"><div class="empty">Đang tải…</div></main>
+<div id="taskbar"></div>
+
+<script>
+const STEPS = [
+  { label: "Tải lên", sub: "video + ảnh mẫu", target: "s1" },
+  { label: "Chia đoạn", sub: "tạo prompt", target: "s2" },
+  { label: "Đoạn neo", sub: "Flow · làm tay", target: "s3", flow: true },
+  { label: "Duyệt neo", sub: "giữ đồng nhất", target: "s3" },
+  { label: "Các đoạn còn lại", sub: "Flow · làm tay", target: "s3", flow: true },
+  { label: "Kiểm tra", sub: "contact sheet", target: "s6" },
+  { label: "Ghép video", sub: "final.mp4", target: "s7" },
+];
+const ASSETS = [
+  ["character", "Nhân vật", "Ảnh Mây: chính diện, nhiều góc"],
+  ["outfit", "Trang phục", "Bộ đồ cần mặc"],
+  ["accessories", "Phụ kiện", "Đồng hồ, túi, mũ…"],
+  ["prop", "Mẫu xe", "Xe đạp, chụp 3–4 góc"],
+  ["background", "Bối cảnh", "Tuỳ chọn"],
+];
+const SETTINGS = [
+  ["subject_in_source", "Người cần thay trong video gốc", "the cyclist"],
+  ["prop_label", "Tên vật dụng (tiếng Anh)", "bicycle"],
+  ["background_prompt", "Bối cảnh mới (để trống = giữ bối cảnh gốc)", "a quiet street in Ho Chi Minh City at 6 am"],
+  ["identity_lock", "Khoá nhân vật — đầu prompt", "Use the attached reference image as the same character…", true],
+  ["end_lock", "Khoá nhân vật — cuối prompt", "Same character as the reference, do not change her face or hair…", true],
+];
+
+let project = localStorage.getItem("mcv.project") || "";
+let state = null;
+let polling = null;
+const draft = {};  // unsaved settings survive re-renders
+
+// ---------- helpers ----------
+function h(tag, attrs = {}, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of children.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : String(c));
+  return el;
+}
+const qs = (o) => new URLSearchParams(o).toString();
+async function api(method, path, body) {
+  const res = await fetch(path, { method, headers: body ? { "Content-Type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+function toast(text, kind = "", spinning = false) {
+  const bar = document.getElementById("taskbar");
+  bar.className = "show " + kind;
+  bar.replaceChildren(...(spinning ? [h("div", { class: "spin" })] : []), h("span", {}, text));
+  if (!spinning && kind !== "error") setTimeout(() => bar.classList.remove("show"), 4000);
+  if (kind === "error") bar.onclick = () => bar.classList.remove("show");
+}
+function upload(kind, file, seg, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", "/api/upload?" + qs({ p: project, kind, name: file.name, ...(seg ? { seg } : {}) }));
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress && onProgress(e.loaded / e.total);
+    xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(JSON.parse(xhr.responseText || "{}").error || "Tải lên thất bại"));
+    xhr.onerror = () => reject(new Error("Mất kết nối tới tool"));
+    xhr.send(file);
+  });
+}
+function dropTarget(el, onFiles) {
+  el.addEventListener("dragover", (e) => { e.preventDefault(); el.classList.add("over"); });
+  el.addEventListener("dragleave", () => el.classList.remove("over"));
+  el.addEventListener("drop", (e) => { e.preventDefault(); el.classList.remove("over"); onFiles([...e.dataTransfer.files]); });
+}
+function filePicker(accept, multiple, onFiles) {
+  const input = h("input", { type: "file", accept, multiple, hidden: true });
+  input.addEventListener("change", () => { onFiles([...input.files]); input.value = ""; });
+  return input;
+}
+function copy(text, btn) {
+  navigator.clipboard.writeText(text).then(() => { btn.textContent = "Đã copy ✓"; setTimeout(() => btn.textContent = "Copy prompt", 1500); });
+}
+const dl = (url) => url + "&dl=1";
+
+// ---------- data flow ----------
+async function loadProjects() {
+  const { projects, dir } = await api("GET", "/api/projects");
+  const sel = document.getElementById("projectSelect");
+  sel.replaceChildren(...projects.map((p) => h("option", { value: p, selected: p === project }, p)));
+  sel.title = "Thư mục dự án: " + dir;
+  if (!projects.includes(project)) project = projects[0] || "";
+  if (!project) {
+    document.getElementById("app").replaceChildren(h("div", { class: "empty" },
+      h("p", {}, "Chưa có dự án nào."), h("button", { class: "primary", onclick: newProject }, "+ Tạo dự án đầu tiên"),
+      h("p", { class: "muted" }, "Dự án được lưu trong: " + dir)));
+    return;
+  }
+  sel.value = project;
+  await refresh();
+}
+async function refresh() {
+  if (!project) return;
+  localStorage.setItem("mcv.project", project);
+  state = await api("GET", "/api/state?" + qs({ p: project }));
+  render();
+  const t = state.task;
+  if (t.running) {
+    toast(t.message, "", true);
+    if (!polling) polling = setInterval(refresh, 1500);
+  } else if (polling) {
+    clearInterval(polling); polling = null;
+    t.error ? toast(t.error, "error") : toast(t.message, "ok");
+  }
+}
+async function run(action) {
+  try { await api("POST", "/api/run?" + qs({ p: project, action })); await refresh(); }
+  catch (e) { toast(e.message, "error"); }
+}
+async function newProject() {
+  const name = prompt("Tên dự án (chữ, số, khoảng trắng, - _):", "may_dap_xe_ep" + String(new Date().getDate()).padStart(2, "0"));
+  if (!name) return;
+  try { await api("POST", "/api/projects", { name }); project = name.trim(); await loadProjects(); }
+  catch (e) { toast(e.message, "error"); }
+}
+
+// ---------- render ----------
+function render() {
+  const busy = state.task.running;
+  const current = state.steps.findIndex((s) => !s);
+  const app = document.getElementById("app");
+  app.replaceChildren(
+    renderFlow(current),
+    renderUploads(),
+    renderPrepare(busy),
+    renderSegments(busy),
+    renderCheck(busy),
+    renderAssemble(busy),
+  );
+}
+
+function renderFlow(current) {
+  return h("nav", { class: "flow", "aria-label": "Quy trình" }, STEPS.map((s, i) => {
+    const cls = ["node", s.flow ? "flowstep" : "", state.steps[i] ? "done" : "", i === current ? "current" : ""].join(" ");
+    return h("div", { class: cls, onclick: () => document.getElementById(s.target)?.scrollIntoView({ behavior: "smooth" }) },
+      h("div", { class: "dot" }, state.steps[i] ? "✓" : i + 1),
+      h("div", {}, h("div", { class: "label" }, s.label), h("div", { class: "sub" }, s.sub)));
+  }));
+}
+
+function zone(kind, title, hint, items, accept, isVideo) {
+  const bar = h("div", { class: "progress" }, h("div"));
+  const pick = filePicker(accept, true, (files) => send(files));
+  const el = h("div", { class: "drop" },
+    h("h3", {}, title), h("div", { class: "hint" }, hint), bar,
+    h("div", { class: "thumbs" }, items.map((it) => h("div", { class: "thumb" + (isVideo ? " video" : ""), title: it.name },
+      isVideo ? h("video", { src: it.url, controls: true, preload: "metadata" }) : h("img", { src: it.url, alt: it.name }),
+      h("div", { class: "cap" }, it.name),
+      h("button", { class: "x", title: "Xoá", onclick: async () => {
+        if (!confirm("Xoá " + it.name + "?")) return;
+        try { await api("POST", "/api/delete?" + qs({ p: project, kind, name: it.name })); refresh(); } catch (e) { toast(e.message, "error"); }
+      } }, "✕")))),
+    h("button", { class: "pick", onclick: () => pick.click() }, isVideo ? "Chọn video…" : "Chọn ảnh…"), pick);
+  async function send(files) {
+    bar.style.display = "block";
+    try {
+      for (const [i, f] of files.entries()) {
+        await upload(kind, f, null, (r) => bar.firstChild.style.width = ((i + r) / files.length * 100) + "%");
+      }
+      toast(`Đã tải lên ${files.length} file`, "ok");
+    } catch (e) { toast(e.message, "error"); }
+    refresh();
+  }
+  dropTarget(el, send);
+  return el;
+}
+
+function renderUploads() {
+  const form = h("div", { class: "settings" }, SETTINGS.map(([key, label, ph, wide]) =>
+    h("div", { class: wide ? "wide" : "" }, h("label", { for: "set_" + key }, label),
+      wide ? h("textarea", { id: "set_" + key, placeholder: ph, oninput: (e) => draft[key] = e.target.value }, draft[key] ?? state.settings[key] ?? "")
+           : h("input", { id: "set_" + key, type: "text", placeholder: ph, value: draft[key] ?? state.settings[key] ?? "",
+                          oninput: (e) => draft[key] = e.target.value }))));
+  const save = h("button", { class: "primary", onclick: async () => {
+    const values = Object.fromEntries(SETTINGS.map(([k]) => [k, document.getElementById("set_" + k).value]));
+    try {
+      await api("POST", "/api/settings?" + qs({ p: project }), values);
+      for (const k of Object.keys(draft)) delete draft[k];
+      if (state.segments.length) await run("jobs"); else { toast("Đã lưu cài đặt", "ok"); refresh(); }
+    } catch (e) { toast(e.message, "error"); }
+  } }, "Lưu cài đặt");
+  return h("section", { id: "s1" },
+    h("h2", {}, h("span", { class: "num" }, "1"), "Tải lên video gốc và mẫu thay thế"),
+    h("p", { class: "muted" }, "Kéo thả file vào từng ô. Nhiều video gốc sẽ được ghép theo thứ tự tải lên. Mỗi ô ảnh được gộp thành một ảnh mẫu cho Flow."),
+    h("div", { class: "drops" },
+      zone("source", "Video gốc", "Chuyển động, nhịp, âm thanh lấy từ đây", state.sources, "video/*", true),
+      ASSETS.map(([k, t, hint]) => zone(k, t, hint, state.assets[k], "image/*", false))),
+    form, h("div", { class: "row", style: "margin-top:12px" }, save,
+      h("span", { class: "muted" }, "Dán khoá nhân vật Mây vào 2 ô cuối để mọi prompt đều giữ đúng mặt.")));
+}
+
+function renderPrepare(busy) {
+  const ready = state.steps[0];
+  const has = state.segments.length;
+  return h("section", { id: "s2" },
+    h("h2", {}, h("span", { class: "num" }, "2"), "Chia đoạn và tạo prompt"),
+    h("p", { class: "muted" }, "Tự dò điểm cắt cảnh, chia thành đoạn ≤ 8 giây (chồng 0,5 giây để nối mượt), tạo ảnh mẫu và prompt cho từng đoạn."),
+    h("div", { class: "step-actions" },
+      h("button", { class: "primary", disabled: busy || !ready, onclick: () => {
+        if (has && !confirm("Chia lại sẽ tạo danh sách đoạn mới; các video Flow đã tải lên có thể không còn khớp. Tiếp tục?")) return;
+        run("prepare");
+      } }, has ? "Chia lại" : "Chia đoạn"),
+      !ready ? h("span", { class: "muted" }, "Cần ít nhất 1 video gốc và 1 ảnh nhân vật.") : null,
+      has ? h("span", { class: "muted" }, `${has} đoạn · tổng ${state.segments.reduce((a, s) => a + s.need, 0).toFixed(1)} s (gồm phần chồng lấn)`) : null));
+}
+
+function segmentCard(seg, busy) {
+  const isAnchor = seg.id === state.anchor.id;
+  const status = seg.qc ? seg.qc.status : (seg.output_url ? null : "todo");
+  const pick = filePicker("video/*", false, (files) => sendOut(files[0]));
+  const out = seg.output_url
+    ? h("video", { src: seg.output_url, controls: true, preload: "metadata" })
+    : h("div", { class: "outdrop", onclick: () => pick.click() }, "Thả video Flow tải về vào đây", h("br"), "hoặc bấm để chọn");
+  async function sendOut(file) {
+    if (!file) return;
+    toast(`Đang tải ${file.name}…`, "", true);
+    try { await upload("output", file, seg.id); toast(`Đã nhận kết quả ${seg.id}`, "ok"); } catch (e) { toast(e.message, "error"); }
+    refresh();
+  }
+  const card = h("div", { class: "card" + (isAnchor ? " anchor" : "") },
+    h("header", {},
+      h("h3", {}, seg.id, h("span", { class: "muted" }, ` · ${seg.need.toFixed(2)} s`)),
+      h("div", { class: "row" },
+        isAnchor ? h("span", { class: "badge anchor" }, state.anchor.approved ? "NEO ✓" : "NEO · làm trước") : null,
+        status ? h("span", { class: "badge " + status }, { todo: "Chưa có", MISSING: "Chưa có" }[status] || status) : null)),
+    h("div", { class: "pair" },
+      h("div", { class: "slot" }, h("span", {}, "① Tải đoạn này lên Flow"), h("video", { src: seg.upload_url, controls: true, preload: "metadata" }),
+        h("a", { href: dl(seg.upload_url), download: seg.upload_name }, "⬇ Tải " + seg.upload_name)),
+      h("div", { class: "slot" }, h("span", {}, "④ Kết quả Flow"), out, pick,
+        seg.output_url ? h("a", { href: "#", onclick: (e) => { e.preventDefault(); pick.click(); } }, "↻ Thay video khác") : null)),
+    h("div", {}, h("span", { class: "muted" }, "② Gắn ảnh mẫu đúng thứ tự (bấm để tải):"),
+      h("div", { class: "ingredients" }, seg.ingredients.map((ing, i) =>
+        h("a", { href: dl(ing.url), download: ing.name, title: ing.name }, h("img", { src: ing.url, alt: ing.name }), h("b", {}, i + 1))))),
+    h("div", {}, h("div", { class: "row", style: "justify-content:space-between" },
+        h("span", { class: "muted" }, "③ Dán prompt vào Flow"),
+        h("button", { onclick: (e) => copy(seg.prompt, e.target) }, "Copy prompt")),
+      h("textarea", { class: "prompt", readonly: true }, seg.prompt)),
+    seg.qc && seg.qc.issues.length ? h("div", { class: "issues" }, "⚠ " + seg.qc.issues.join("; ") +
+      ". Tạo lại đoạn này với prompt trên, thêm câu: \"Fix only: " + seg.qc.issues.join("; ") + ".\"") : null,
+    isAnchor && seg.output_url ? h("div", { class: "row" },
+      h("button", { class: "primary", disabled: busy, onclick: () => {
+        if (confirm("Bạn đã xem kỹ mặt, nốt ruồi trái, đồng hồ tay trái, trang phục, xe của đoạn neo và chấp nhận?")) run("approve");
+      } }, state.anchor.approved ? "Duyệt lại đoạn neo" : "✓ Duyệt làm đoạn neo"),
+      h("span", { class: "muted" }, "Khung neo sẽ được thêm vào ảnh mẫu của mọi đoạn khác.")) : null);
+  dropTarget(card, (files) => sendOut(files.find((f) => f.type.startsWith("video")) || files[0]));
+  return card;
+}
+
+function renderSegments(busy) {
+  const segs = state.segments;
+  const anchor = segs.filter((s) => s.id === state.anchor.id);
+  const others = segs.filter((s) => s.id !== state.anchor.id);
+  return h("section", { id: "s3" },
+    h("h2", {}, h("span", { class: "num" }, "3–5"), "Tạo trên Google Flow (Omni)"),
+    h("p", { class: "muted" }, "Mỗi đoạn: ① tải đoạn gốc lên Flow → ② gắn ảnh mẫu đúng thứ tự → ③ dán prompt → tạo → ④ thả video tải về vào thẻ. Làm đoạn NEO trước rồi duyệt, sau đó mới làm các đoạn còn lại."),
+    !segs.length ? h("div", { class: "empty" }, "Chưa chia đoạn (bước 2).") :
+      h("div", { class: "cards" }, anchor.map((s) => segmentCard(s, busy)),
+        state.anchor.approved ? others.map((s) => segmentCard(s, busy))
+          : others.length ? h("div", { class: "card empty" }, `Duyệt đoạn neo trước để mở ${others.length} đoạn còn lại (prompt sẽ có thêm khung neo).`) : null));
+}
+
+function renderCheck(busy) {
+  const outs = state.segments.filter((s) => s.output_url).length;
+  return h("section", { id: "s6" },
+    h("h2", {}, h("span", { class: "num" }, "6"), "Kiểm tra đồng nhất"),
+    h("p", { class: "muted" }, "Đo lệch màu so với đoạn neo và độ giật ở mối nối, rồi tạo contact sheet. Mặt, nốt ruồi, đồng hồ, dáng xe: bạn tự xem trên ảnh."),
+    h("div", { class: "step-actions" },
+      h("button", { class: "primary", disabled: busy || !outs, onclick: () => run("check") }, "Kiểm tra"),
+      h("span", { class: "muted" }, `${outs}/${state.segments.length} đoạn đã có kết quả Flow`)),
+    state.contact_sheet ? h("div", { class: "contact" },
+      h("a", { href: state.contact_sheet, target: "_blank" }, h("img", { src: state.contact_sheet, alt: "Contact sheet" })),
+      h("p", { class: "muted" }, "Hàng refs = ảnh mẫu; mỗi hàng seg = khung giữa video gốc, rồi khung đầu / giữa / cuối của bản Flow.")) : null);
+}
+
+function renderAssemble(busy) {
+  return h("section", { id: "s7" },
+    h("h2", {}, h("span", { class: "num" }, "7"), "Ghép thành video dài"),
+    h("p", { class: "muted" }, "Ép mỗi đoạn đúng thời lượng gốc, nối mượt phần chồng lấn, chỉnh màu theo đoạn neo, dùng âm thanh gốc. Xuất 1080×1920."),
+    h("div", { class: "step-actions" },
+      h("button", { class: "primary", disabled: busy || !state.steps[4], onclick: () => run("assemble") }, "Ghép video"),
+      !state.steps[4] ? h("span", { class: "muted" }, "Cần đủ kết quả Flow cho mọi đoạn.") : null,
+      state.steps[4] && !state.steps[5] ? h("span", { class: "muted" }, "Nên chạy Kiểm tra trước khi ghép.") : null),
+    state.final ? h("div", { class: "final" }, h("video", { src: state.final, controls: true }),
+      h("p", {}, h("a", { href: dl(state.final), download: "final.mp4" }, "⬇ Tải final.mp4"),
+        h("span", { class: "muted" }, " — đưa vào Remotion / CapCut để thêm phụ đề, giọng, nhạc."))) : null);
+}
+
+document.getElementById("projectSelect").addEventListener("change", (e) => {
+  project = e.target.value;
+  for (const k of Object.keys(draft)) delete draft[k];
+  refresh();
+});
+document.getElementById("newProject").addEventListener("click", newProject);
+loadProjects().catch((e) => toast(e.message, "error"));
+</script>
+</body>
+</html>

@@ -9,7 +9,7 @@ Công cụ hỗ trợ làm video "copy chuyển động" bằng **Google Flow (G
 | Stage       | Artifact          | Status |
 | ----------- | ----------------- | ------ |
 | Requirement | `Requirement.md`  | Draft — chờ người duyệt |
-| Prototype   | `motion_copy/`    | Created, smoke test passes |
+| Prototype   | `motion_copy/`    | Created, smoke tests pass (CLI + UI API) |
 
 ## Vì sao cần tool
 
@@ -25,6 +25,24 @@ Flow/Omni chỉ sửa được đoạn ngắn (~10 giây) mỗi lần, và mỗi
 | Lấy khung đã đạt làm điều kiện cho đoạn sau | VACE / Wan2GP (khung cuối của cửa sổ trước) | Đoạn neo được duyệt → xuất "anchor frame" làm ingredient liên tục cho mọi đoạn khác |
 | Hài hoà ánh sáng/màu (relighting) | Wan2.2-Animate relighting LoRA | Khi ghép, chỉnh màu từng đoạn về thống kê màu của đoạn neo (một phép biến đổi cố định/đoạn, không nhấp nháy) |
 | Giữ nhịp theo video gốc | Pose/motion transfer | Mỗi đoạn được ép đúng thời lượng gốc; giữ điểm cắt cảnh gốc; dùng âm thanh gốc |
+
+## Giao diện (khuyên dùng)
+
+```powershell
+cd 05_Projects\MotionCopyVideo\motion_copy
+.\Start-MotionCopyUI.ps1
+```
+
+Trình duyệt tự mở `http://127.0.0.1:8765` (chỉ chạy trên máy bạn, không ra Internet). Dự án được lưu ở `%USERPROFILE%\Videos\MotionCopy`.
+
+* **Sơ đồ quy trình** 7 bước ở đầu trang: xanh = xong, viền xanh dương = bước đang làm, viền tím nét đứt = bước làm tay trên Flow. Bấm vào bước để nhảy tới phần đó.
+* **Bước 1:** kéo thả video gốc, ảnh nhân vật, trang phục, phụ kiện, mẫu xe, bối cảnh vào từng ô; điền khoá nhân vật → *Lưu cài đặt*.
+* **Bước 2:** *Chia đoạn*.
+* **Bước 3–5:** mỗi đoạn là một thẻ: ① tải đoạn gốc lên Flow, ② tải ảnh mẫu theo số thứ tự, ③ *Copy prompt*, ④ thả video Flow tải về vào thẻ. Làm thẻ **NEO** trước → *Duyệt làm đoạn neo* → các thẻ còn lại mới mở.
+* **Bước 6:** *Kiểm tra* → nhãn PASS/CHECK trên từng thẻ + contact sheet.
+* **Bước 7:** *Ghép video* → xem và tải `final.mp4` ngay trên trang.
+
+Dòng lệnh bên dưới vẫn dùng được và cho kết quả giống hệt.
 
 ## Cài đặt (Windows)
 
@@ -75,6 +93,9 @@ Tiện ích: `lastframe <video> <ảnh.png>` xuất khung cuối một clip đ�
 
 ```powershell
 .\.venv\Scripts\python.exe smoke_test.py
+.\.venv\Scripts\python.exe app_smoke_test.py
 ```
 
-Smoke test tự tạo video tổng hợp (có cắt cảnh, có/không âm thanh, đường dẫn tiếng Việt), giả lập Flow, chạy `prepare → check → assemble` và kiểm tra video cuối đúng thời lượng, kích thước, có âm thanh.
+`smoke_test.py` tự tạo video tổng hợp (có cắt cảnh, có/không âm thanh, đường dẫn tiếng Việt), giả lập Flow, chạy `prepare → check → assemble` và kiểm tra video cuối đúng thời lượng, kích thước, có âm thanh.
+
+`app_smoke_test.py` chạy cùng quy trình qua API của giao diện (tải lên, chia đoạn, duyệt neo, kiểm tra, ghép) và kiểm tra chặn đường dẫn ngoài dự án, chặn file sai loại.

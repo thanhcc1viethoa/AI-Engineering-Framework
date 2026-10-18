@@ -12,13 +12,13 @@
 | -------------- | --------------------------------------- |
 | Project Name   | MotionCopyVideo                         |
 | Requirement ID | REQ-MCV-001                             |
-| Version        | 0.1.0                                   |
+| Version        | 0.2.0                                   |
 | Status         | Draft                                   |
 | Author         | AI agent (Claude Code), on user request |
 | Owner          | Repository owner                        |
 | Reviewer       |                                         |
 | Created Date   | 2026-10-17                              |
-| Last Updated   | 2026-10-17                              |
+| Last Updated   | 2026-10-18                              |
 
 ---
 
@@ -47,6 +47,7 @@ Produce long "motion copy" videos with Google Flow (Gemini Omni): replace the pe
 * Anchor workflow: after a human approves the anchor clip, export an anchor frame and add it as a continuity ingredient to all other segments.
 * Quality check of downloaded clips: duration, colour drift versus the anchor clip, seam difference at overlaps, and a contact sheet for human visual review.
 * Assembly: retime to source durations, normalize resolution/fps, colour-match to the anchor, cross-fade overlaps, hard-cut at original cuts, original audio.
+* A local web interface showing the workflow as a diagram, with direct upload of source videos, reference images and Flow results.
 
 ## Out of Scope
 
@@ -84,6 +85,9 @@ Produce long "motion copy" videos with Google Flow (Gemini Omni): replace the pe
 | FR-010 | `assemble` shall produce one video whose duration equals the total source duration, cross-fading overlaps and hard-cutting at original cuts. | Functional | Critical | Developer | User Request | Implemented |
 | FR-011 | `assemble` shall use the original source audio (silence for sources without audio) when `output.audio` is `source`. | Functional | High | Developer | User Request | Implemented |
 | FR-012 | `assemble` shall optionally colour-match every clip to the anchor clip with one fixed per-clip transform. | Functional | Medium | Developer | User Request | Implemented |
+| FR-013 | A local web UI shall show the seven workflow steps as a diagram with done / current / pending status. | Functional | High | Developer | User Request | Implemented |
+| FR-014 | The UI shall accept drag-and-drop upload of source videos, asset images per category and Flow results per segment. | Functional | High | Developer | User Request | Implemented |
+| FR-015 | The UI shall run prepare, approve-anchor, check and assemble, and show prompts, ingredients, QC status, contact sheet and final video. | Functional | High | Developer | User Request | Implemented |
 
 ---
 
@@ -95,7 +99,7 @@ Produce long "motion copy" videos with Google Flow (Gemini Omni): replace the pe
 | NFR-002 | Determinism | Same inputs and config produce the same plan and job sheet |
 | NFR-003 | Fail loudly | Errors print one clear line; exit codes 0 = ok, 1 = clips need attention, 2 = error |
 | NFR-004 | Dependencies | Only numpy and opencv-python-headless, pinned in `requirements.txt` |
-| NFR-005 | Security | No credentials stored; no network access by the tool |
+| NFR-005 | Security | No credentials stored; no network access by the tool; UI bound to 127.0.0.1 only, file access confined to the project folder, uploads restricted to video/image types |
 
 ---
 
@@ -104,6 +108,7 @@ Produce long "motion copy" videos with Google Flow (Gemini Omni): replace the pe
 | ID             | Validation Method | Verified |
 | -------------- | ----------------- | -------- |
 | FR-001..FR-012 | Test (`motion_copy/smoke_test.py`) | Yes — synthetic data, 2026-10-17 |
+| FR-013..FR-015 | Test (`motion_copy/app_smoke_test.py`) + visual check of screenshots | Yes — synthetic data, 2026-10-18 |
 | FR-007, FR-008 | Demonstration on a real Flow clip | No |
 | NFR-001        | Test (non-ASCII paths in smoke test) on Linux; Windows not yet run | Partial |
 
@@ -171,6 +176,7 @@ Produce long "motion copy" videos with Google Flow (Gemini Omni): replace the pe
 | Version | Date       | Author   | Summary |
 | ------- | ---------- | -------- | ------- |
 | 0.1.0   | 2026-10-17 | AI agent | Initial draft with prototype |
+| 0.2.0   | 2026-10-18 | AI agent | Added local web UI (FR-013..FR-015) on user request |
 
 ---
 
@@ -189,3 +195,4 @@ Produce long "motion copy" videos with Google Flow (Gemini Omni): replace the pe
 | Version | Date       | Author   | Notes |
 | ------- | ---------- | -------- | ----- |
 | 0.1.0   | 2026-10-17 | AI agent | Initial draft |
+| 0.2.0   | 2026-10-18 | AI agent | Added web UI requirements |

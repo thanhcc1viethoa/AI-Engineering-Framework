@@ -7,6 +7,7 @@ mole, watch side and bike shape are judged by a person on the contact sheet.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -109,6 +110,12 @@ def check(project: planner.Project, approve_anchor: bool = False) -> tuple[list[
     report_path = qc_dir / "report.md"
     qc_dir.mkdir(parents=True, exist_ok=True)
     report_path.write_text(render_report(project, reports, anchor_id), encoding="utf-8")
+    (qc_dir / "report.json").write_text(json.dumps([
+        {"id": r.segment.id, "status": r.status, "issues": r.issues,
+         "duration": r.duration, "need": r.segment.need, "similarity": r.similarity,
+         "source_similarity": r.source_similarity, "seam": r.seam}
+        for r in reports
+    ], indent=2), encoding="utf-8")
     return reports, report_path
 
 

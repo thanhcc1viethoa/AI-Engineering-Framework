@@ -41,6 +41,10 @@ DEFAULTS = {
 }
 
 
+def asset_dir(root: Path, cfg: dict, category: str) -> Path:
+    return root / cfg.get("assets", {}).get(category, f"assets/{category}")
+
+
 class ConfigError(ValueError):
     """Raised for a missing or invalid project.json value."""
 
@@ -87,7 +91,7 @@ class Project:
 
     # ---- paths -----------------------------------------------------------
     def asset_dir(self, category: str) -> Path:
-        return self.root / self.cfg.get("assets", {}).get(category, f"assets/{category}")
+        return asset_dir(self.root, self.cfg, category)
 
     @property
     def plan_path(self) -> Path:
