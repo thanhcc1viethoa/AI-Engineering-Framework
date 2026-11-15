@@ -386,11 +386,11 @@ Chạy từng mục, ghi kết quả thật (đạt/không đạt), không suy �
 ## 13.1 Script (`scripts/`)
 
 * `install.ps1`: tạo venv, `pip install -r requirements.txt` cho `backend/` và `mcp_server/`, `npm install && npm run build` cho `frontend/`.
-* `start.ps1`: khởi động theo thứ tự — backend (uvicorn) → mcp_server → phục vụ `frontend/dist` (vd. qua `npx serve` hoặc static file của FastAPI); ghi PID mỗi tiến trình vào `logs/*.pid`.
+* `start.ps1`: khởi động backend (uvicorn) rồi phục vụ `frontend/dist` (qua `npx serve`); ghi PID mỗi tiến trình vào `logs/*.pid`. **Không khởi động `mcp_server` ở đây** — nó dùng giao thức stdio, do chính Claude Desktop tự spawn làm subprocess theo entry trong `claude_desktop_config.json` (mục 10 bên dưới); một tiến trình `mcp_server` thứ hai do `start.ps1` chạy sẽ không phải là tiến trình Claude Desktop thực sự nói chuyện cùng.
 * `stop.ps1`: đọc file `.pid`, dừng đúng tiến trình đó (không `taskkill` hàng loạt theo tên tiến trình chung chung).
 * `restart.ps1`: gọi `stop.ps1` rồi `start.ps1`.
 * `health_check.ps1`: gọi `GET /system/status`; nếu không phản hồi trong vài giây, ghi log và tự gọi `restart.ps1` (giới hạn số lần thử lại, tránh vòng lặp khởi động lại vô hạn).
-* `backup.ps1`: copy `config/` và file SQLite trong `database/` sang `backup/<timestamp>/` trước khi cho phép thay đổi cấu hình.
+* `backup_config.ps1`: copy `config/` và file SQLite trong `database/` sang `backup/<timestamp>/` trước khi cho phép thay đổi cấu hình. (Đặt tên `backup_config.ps1` thay vì `backup.ps1` vì "backup" là tên dành riêng/cấm dùng theo `02_Policies/Naming_Policy.md` "Reserved Names".)
 
 ## 13.2 Tự khởi động cùng Windows
 

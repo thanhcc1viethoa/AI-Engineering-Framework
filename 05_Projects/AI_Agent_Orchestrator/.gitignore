@@ -18,10 +18,9 @@ logs/*
 
 # Python / Node runtime artifacts
 backend/.venv/
-backend/__pycache__/
 mcp_server/.venv/
-mcp_server/__pycache__/
-agents/**/__pycache__/
+**/__pycache__/
+**/.pytest_cache/
 frontend/node_modules/
 frontend/dist/
 frontend/build/

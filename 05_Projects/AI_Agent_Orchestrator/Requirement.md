@@ -145,7 +145,7 @@ No Compliance Requirements were specified in the source request.
 | FR-019 | Dashboard-to-backend communication shall use REST API for requests and WebSocket for real-time updates. | Technical | High | | User Request | Draft |
 | FR-020 | Orchestration loop: for each request, Claude shall analyze the goal, decompose it into tasks, select agents, submit tasks via MCP, track progress, retrieve results, evaluate results, request fixes from the responsible agent within a bounded retry limit, and produce a final report. Completion shall never be declared without verifying the actual task result. | Functional | Critical | | User Request | Draft |
 | FR-021 | Enforce bounded limits on fix-retry count, task execution time, and concurrent task count. Exact numeric values are not specified in the source request and shall be defined in Architecture.md (see AS-004). | Non-Functional | High | | User Request | Draft |
-| FR-022 | Provide PowerShell scripts `install.ps1`, `start.ps1`, `stop.ps1`, `restart.ps1`, `health_check.ps1`, `backup.ps1`, starting services in the correct dependency order. | Technical | High | | User Request | Draft |
+| FR-022 | Provide PowerShell scripts `install.ps1`, `start.ps1`, `stop.ps1`, `restart.ps1`, `health_check.ps1`, `backup_config.ps1` (named `backup_config.ps1`, not `backup.ps1`, per Naming_Policy.md — see Notes), starting services in the correct dependency order. | Technical | High | | User Request | Draft |
 | FR-023 | Configure the Orchestrator services to autostart with Windows, enabled only after testing passes. | Technical | High | | User Request | Draft |
 | FR-024 | Detect a hung/stuck process and perform a controlled, safe automatic restart. | Non-Functional | Medium | | User Request | Draft |
 | FR-025 | Require authentication before the web dashboard can be used. | Non-Functional | Critical | | User Request | Draft |
@@ -369,6 +369,7 @@ No success metrics beyond the Acceptance Criteria above were specified in the so
 # Notes
 
 * This Requirement captures the user's master prompt as given, without adding scope it did not specify. Numeric limits (retry counts, timeouts, concurrency) and third-party tool capabilities (Antigravity CLI, Muse4AI) are flagged under **Assumptions** rather than guessed.
+* The master prompt named one script `backup.ps1` (FR-022); the implementation uses `backup_config.ps1` instead, because `backup` alone is a reserved name under `02_Policies/Naming_Policy.md` "Reserved Names", which takes precedence over the source request per this repository's authority order.
 * Per `01_Rules/Global.md` ("AI assists; it does not own"), this document requires human review and approval before `Architecture.md` is created for this project.
 
 ---
