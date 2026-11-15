@@ -28,6 +28,64 @@ cd 05_Projects\AI_Agent_Orchestrator
 
 ---
 
+## 0.1. Cài đặt & cấu hình Muse4AI (nếu muốn dùng agent video)
+
+Muse4AI (`github.com/andrew-babo/muse4ai`) là một **ứng dụng Windows riêng, cài độc lập** với dự án này — nó tự động hóa phiên Meta Muse bạn đã đăng nhập, và là thứ Orchestrator gọi tới khi bạn giao việc cho agent `muse`. Bỏ qua mục này nếu bạn chưa cần tạo video.
+
+### Cài đặt
+
+**Cách 1 — nhanh nhất:** vào https://muse4ai.andrewbabo.com/download, tải installer, chạy. Windows sẽ cảnh báo "file chưa ký" — chọn **More info → Run anyway**. App sẽ tự kiểm tra và cài bản mới từ **Settings › About**, không cần quay lại trang tải.
+
+**Cách 2 — chạy từ source** (cần Node.js 22+):
+
+```powershell
+git clone https://github.com/andrew-babo/muse4ai.git
+cd muse4ai\desktop
+npm install
+npm run build
+npm start
+```
+
+App mở ra, phục vụ API tại `http://127.0.0.1:47821`.
+
+### Cấu hình
+
+1. Trong app, vào **Accounts**, thêm tài khoản Meta Muse của bạn (đăng nhập qua giao diện trong app; phiên đăng nhập chỉ lưu trên máy bạn, ở `%APPDATA%\MuseStudio`).
+2. Vào **Settings › API & agent**:
+   - Bấm tạo **API key** — dạng `msk_...`, **chỉ hiện một lần**, copy lưu lại ngay (ví dụ dán tạm vào `config\.env` của `AI_Agent_Orchestrator`).
+   - Màn hình này cũng có sẵn đoạn JSON để dán thẳng vào cấu hình agent khác nếu cần.
+   - (Tùy chọn, không bắt buộc) Dùng OAuth thay vì key: agent redirect tới app, bạn duyệt bằng mã 6 số hiện trên màn hình — không cần copy gì cả.
+3. (Tùy chọn) Nếu agent chạy ở máy/cloud khác (không cùng máy với Muse4AI), bật **Remote access** (Quick tunnel / tunnel riêng / domain riêng) trong Settings — bình thường (agent chạy cùng máy, như `AI_Agent_Orchestrator`) thì **không cần** bước này.
+
+### Dùng trực tiếp trong app (không qua AI agent)
+
+* **Studio** — viết prompt, đính kèm ảnh tham chiếu nếu cần, bấm chạy.
+* **Queue** — xem job đang chạy, trạng thái, ảnh/video xem trước.
+* **Library** — toàn bộ ảnh/video đã tạo, tìm kiếm được.
+
+### Kiểm tra kết nối API (trước khi dùng qua Orchestrator)
+
+```powershell
+curl http://127.0.0.1:47821/v1/health
+curl http://127.0.0.1:47821/v1/status -H "Authorization: Bearer msk_YOUR_KEY"
+```
+
+* `health` không cần key — trả lời nghĩa là app đang mở.
+* `status` trả `401` nghĩa là key sai/thiếu; lỗi kết nối nghĩa là app chưa mở, hoặc API server bị tắt trong Settings, hoặc bạn đã đổi cổng khác `47821`.
+
+### Nối với dự án `AI_Agent_Orchestrator`
+
+Chỉ cần điền vào `config\.env` của dự án này:
+
+```
+MUSE4AI_API_KEY=msk_...        # key thật bạn vừa tạo
+MUSE4AI_BASE_URL=http://127.0.0.1:47821/v1   # giữ mặc định nếu không đổi cổng
+```
+
+rồi dùng như mô tả ở mục 3/4 bên dưới (Dashboard hoặc Claude Desktop) — không cần cấu hình gì thêm phía Muse4AI.
+
+---
+
 ## 1. Cài đặt lần đầu
 
 ```powershell
