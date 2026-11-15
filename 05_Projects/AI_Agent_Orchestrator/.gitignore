@@ -1,0 +1,32 @@
+# Generated/runtime data — directory kept via .gitkeep, contents not tracked
+output/videos/*
+!output/videos/.gitkeep
+output/code/*
+!output/code/.gitkeep
+output/reports/*
+!output/reports/.gitkeep
+database/*
+!database/.gitkeep
+backup/*
+!backup/.gitkeep
+
+# Root .gitignore ignores any path named "logs" — re-include this directory
+# itself (but not its runtime contents) so logs/.gitkeep can be tracked.
+!logs/
+logs/*
+!logs/.gitkeep
+
+# Python / Node runtime artifacts
+backend/.venv/
+backend/__pycache__/
+mcp_server/.venv/
+mcp_server/__pycache__/
+agents/**/__pycache__/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+# Secrets — never commit real values (see Requirement.md FR-026)
+.env
+.env.*
+!.env.example
