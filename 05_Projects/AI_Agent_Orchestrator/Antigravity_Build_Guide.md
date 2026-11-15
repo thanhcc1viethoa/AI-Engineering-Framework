@@ -285,11 +285,19 @@ Mỗi tool bên dưới gọi thẳng endpoint tương ứng ở mục 6.3. Khô
 
 Lưu ý vai trò kép: **Antigravity-người-viết-Orchestrator** (đang đọc sổ tay này) khác với **Antigravity-bị-Orchestrator-gọi-làm-agent-thực-thi** (đoạn code sắp viết). Đừng nhầm.
 
+**Dùng CLI, không dùng app Desktop.** Google Antigravity hiện có 3 hình thái: IDE gốc, **CLI** (`agy`), và từ bản 2.0 (ra mắt I/O 2026) thêm **Antigravity Desktop** — một app GUI/điều khiển bằng giọng nói, tự nó đã là một "trung tâm điều phối agent" (chạy song song nhiều subagent, lên lịch tác vụ nền) để **người dùng thao tác trực tiếp**, không có API công khai cho chương trình khác gọi vào. Vì vậy Orchestrator tích hợp **CLI**, không phải Desktop app — theo một số nguồn, CLI và Desktop app dùng chung một "agent harness" bên dưới, nên CLI vẫn có năng lực tương đương.
+
+Cú pháp headless thật (tra được từ trang tài liệu chính thức `antigravity.google/docs/cli/headless.md`, qua nguồn thứ cấp vì mạng trong môi trường code bị chặn domain này): `agy --print "<prompt>" --print-timeout <thời lượng>` (dạng ngắn `-p`). File `agents/antigravity/adapter.py` đã dùng đúng cú pháp này thay vì cú pháp đoán ban đầu.
+
+**Rủi ro đã biết, cần kiểm tra thật trên máy (AS-001 chưa giải quyết hoàn toàn):**
+* Một số báo cáo (GitHub issues) nói `agy --print`/`agy -p` có thể **treo hoặc mất stdout** khi output bị pipe/redirect (không phải TTY thật) — đúng tình huống `subprocess.run(capture_output=True)` đang dùng. Chưa rõ đã được Google sửa hay còn tồn tại ở bản hiện tại.
+* Cơ chế xác thực không tương tác (đăng nhập `agy` tương tác một lần trước, hay biến môi trường kiểu `ANTIGRAVITY_TOKEN`) chưa xác nhận được từ nguồn chính thức.
+
 Quy trình `agents/antigravity/`:
 
-1. Kiểm tra `agy --version` và trạng thái đăng nhập trước khi dùng.
+1. Kiểm tra `agy --version` và trạng thái đăng nhập trước khi dùng. Chạy thêm `agy --help` để xác nhận `--print`/`--print-timeout` còn đúng như trên — nếu khác, sửa `run_coding_task` trong `adapter.py`.
 2. Khi nhận một task `assigned_agent == "antigravity"`: tạo thư mục riêng `projects/<task_id>/`, chỉ cấp quyền Antigravity trong thư mục này (FR-007, NFR-007).
-3. Gọi CLI qua `subprocess` ở **chế độ không tương tác** nếu `agy --help` xác nhận có hỗ trợ (AS-001). Nếu không có, dừng lại, báo cho người dùng — không giả định cú pháp.
+3. Gọi CLI qua `subprocess` ở chế độ `--print`. Nếu lệnh trả về exit code 0 nhưng stdout rỗng, đó khớp với lỗi non-TTY đã biết ở trên — kiểm tra thư mục dự án xem có thay đổi thật không trước khi kết luận là lỗi thật.
 4. Áp dụng timeout từ `MAX_TASK_TIMEOUT_SECONDS` (mục 5); nếu vượt timeout → kill process, set `status=FAILED`, `error_message="timeout"`.
 5. Ghi lại: lệnh đã chạy, thời điểm bắt đầu/kết thúc, stdout/stderr, exit code → vào `logs/` và cột `result`/`error_message` của task.
 6. Nếu `exit code != 0` → `status=FAILED`; cho phép chạy lại có kiểm soát tối đa `MAX_FIX_RETRIES` lần (mục 5), mỗi lần retry ghi log riêng.

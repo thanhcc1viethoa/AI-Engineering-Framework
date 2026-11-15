@@ -12,7 +12,7 @@
 | -------------- | -------------------------------------- |
 | Project Name   | AI_Agent_Orchestrator                  |
 | Requirement ID | REQ-001                                |
-| Version        | 0.1.1                                  |
+| Version        | 0.1.2                                  |
 | Status         | Draft                                  |
 | Author         |                                        |
 | Owner          |                                        |
@@ -240,7 +240,7 @@ Rules:
 
 | ID     | Assumption | Validation Status | Validation Method | Validation Date | Reviewer |
 | ------ | ---------- | ------------------ | ------------------ | ----------------- | -------- |
-| AS-001 | The Google Antigravity CLI (`agy`) exists on the target machine, is licensed/logged in, and supports a non-interactive/headless execution mode suitable for programmatic dispatch. | Unvalidated | Inspection (Phase 1 survey) + Demonstration (Phase 5) | | |
+| AS-001 | The Google Antigravity CLI (`agy`) exists on the target machine, is licensed/logged in, and its headless mode (`agy --print "<prompt>" --print-timeout ...`, per Google's own `antigravity.google/docs/cli/headless.md`) behaves as documented for programmatic dispatch via a piped subprocess. Antigravity also ships a separate Antigravity Desktop app (2.0, since I/O 2026) — a GUI/voice agent command center with no documented API for a third party to call — which is why FR-007 integrates the CLI, not the Desktop app. | Partially validated — headless flag syntax confirmed from Google's own docs page via secondary sources (this session's network policy blocks fetching that page directly); third-party reports describe `agy --print` sometimes hanging or dropping stdout on a non-TTY (piped) invocation, status unconfirmed as fixed or current, and the exact non-interactive auth mechanism (prior interactive login vs. an env var) is unconfirmed. | Inspection (done, 2026-11-15, secondary sources) + `agy --help` and a real run on the target machine (pending, Phase 5) | 2026-11-15 (partial) | |
 | AS-002 | Muse4AI's API contract is as documented in its own public repository (github.com/andrew-babo/muse4ai: REST + MCP on `http://127.0.0.1:47821`, `POST /v1/jobs` with `{kind, prompt, repeat, account}` — no duration/resolution/style parameter — returning `{jobs: [...]}`, job statuses `queued/running/needs_review/succeeded/failed/cancelled`). | Partially validated — the adapter (`agents/muse/adapter.py`) was rewritten against that repository's actual OpenAPI document (`desktop/src/shared/api/openapi.ts`) and `agent-kit/muse4ai/references/*.md`, and tested against a mock server replaying that exact contract (`agents/muse/test_adapter.py`). Still unverified: real runtime behavior against a live Muse4AI instance with a signed-in Muse account, and account-specific quotas — Muse4AI is itself an unofficial automation of Meta's web UI, so its real-world reliability depends on Meta's site not changing. | Code review against the real repo (done, 2026-11-15) + a live run on the user's Windows machine (pending) | 2026-11-15 (partial) | |
 | AS-003 | The target Windows machine's actual specifications (OS build, CPU, RAM, free disk space on the install drive, installed Python/Node versions, existing MCP Server configurations, running services) are unknown to this session. This Claude Code session runs in an isolated cloud container with no filesystem or network access to the user's Windows machine, and no Remote Control connection to it is currently established. | Unvalidated | User executes the Phase 1 PowerShell survey script locally and returns its output | | |
 | AS-004 | Numeric bounds for maximum fix-retry count, maximum task execution time, and maximum concurrent tasks (FR-021) are not specified in the source request. | Unvalidated | To be defined in Architecture.md and confirmed with the user | | |
@@ -262,7 +262,7 @@ Rules:
 
 | Dependency | Type | Notes |
 | ---------- | ---- | ----- |
-| Google Antigravity CLI (`agy`) | External tool | Availability/capabilities unverified — see AS-001 |
+| Google Antigravity CLI (`agy`) | External tool | Headless syntax identified from Google's own docs; live behavior unverified — see AS-001 |
 | Muse4AI (github.com/andrew-babo/muse4ai) + a signed-in Meta Muse account | External local app (unofficial, MIT-licensed, runs on the user's own PC) | API contract confirmed from its public source; live behavior/quotas unverified — see AS-002 |
 | Claude Desktop | External application | Runs on the user's Windows machine |
 | Python + pip | Runtime prerequisite | Presence/version confirmed in Phase 1 |
@@ -347,6 +347,7 @@ No success metrics beyond the Acceptance Criteria above were specified in the so
 | ------- | ---- | ------ | ------- |
 | 0.1.0 | 2026-11-15 | | Initial draft from the user's master prompt |
 | 0.1.1 | 2026-11-15 | | Corrected FR-008/AS-002/Dependencies: Muse4AI identified as github.com/andrew-babo/muse4ai (local app, not a cloud API); renamed FR-022's `backup.ps1` to `backup_config.ps1` (Naming_Policy.md reserved name) |
+| 0.1.2 | 2026-11-15 | | Updated AS-001/Dependencies: identified Antigravity's real headless CLI flag (`--print`/`--print-timeout`, from Google's own docs) and clarified that Antigravity Desktop (2.0) is a separate, non-scriptable GUI app — FR-007 integrates the CLI only |
 
 ---
 
@@ -382,3 +383,4 @@ No success metrics beyond the Acceptance Criteria above were specified in the so
 | ------- | ---------- | ------ | ----- |
 | 0.1.0   | 2026-11-15 |        | Initial draft requirement for AI_Agent_Orchestrator, derived from the user's master prompt |
 | 0.1.1   | 2026-11-15 |        | Identified Muse4AI as github.com/andrew-babo/muse4ai and corrected FR-008/AS-002/Dependencies accordingly; renamed `backup.ps1` to `backup_config.ps1` per Naming_Policy.md |
+| 0.1.2   | 2026-11-15 |        | Identified Antigravity's real headless CLI syntax and clarified the CLI-vs-Desktop-app distinction; updated AS-001/Dependencies |

@@ -208,6 +208,6 @@ Chưa có script tự động bật — theo đúng thiết kế, việc này c�
 
 ## Giới hạn hiện tại cần biết
 
-* **Antigravity**: code đã viết nhưng chưa test được với CLI thật (môi trường code không có `agy`). Lần đầu giao task cho agent này, nhiều khả năng cần chỉnh lại cú pháp lệnh trong `agents/antigravity/adapter.py` cho khớp thực tế — báo lỗi cho tôi để sửa.
+* **Antigravity**: dùng **CLI** (`agy`), không phải app **Antigravity Desktop** (bản 2.0) — Desktop là GUI/điều khiển giọng nói cho người dùng trực tiếp, không có API cho chương trình khác gọi. Adapter đã sửa theo cú pháp headless thật của Google (`agy --print "..." --print-timeout ...`), nhưng vẫn **chưa chạy thử trên CLI thật** (môi trường code không có `agy`). Có rủi ro đã biết: một số báo cáo nói `agy --print` có thể treo hoặc không in gì khi output bị pipe (đúng cách adapter đang gọi) — nếu task Antigravity bị treo hoặc trả về rỗng dù code đã chạy, khả năng cao là lỗi này, không phải lỗi logic của adapter. Lần đầu dùng thật, chạy `agy --help` để đối chiếu, báo lỗi cho tôi để sửa.
 * **Muse4AI**: adapter (`agents/muse/adapter.py`) đã được viết đúng theo tài liệu API thật của [github.com/andrew-babo/muse4ai](https://github.com/andrew-babo/muse4ai) (không còn là đoán), có test giả lập xác nhận gửi/nhận đúng định dạng. Vẫn **chưa chạy được với app Muse4AI thật** (cần máy Windows có cài app + tài khoản Muse đăng nhập) — lần đầu dùng thật, báo lại lỗi (nếu có) để tôi đối chiếu với tài liệu và sửa.
 * **6 script PowerShell**: viết cẩn thận nhưng chưa chạy thử thật lần nào (môi trường code không có Windows).
