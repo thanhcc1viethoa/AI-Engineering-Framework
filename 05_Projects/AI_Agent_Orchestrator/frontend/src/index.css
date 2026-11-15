@@ -304,9 +304,13 @@ th {
 }
 
 .character {
-  font-size: 44px;
-  line-height: 1;
+  display: flex;
+  justify-content: center;
   margin: 4px 0;
+}
+
+.character svg {
+  display: block;
 }
 
 .worker-character.mood-busy {
@@ -339,9 +343,6 @@ th {
   border-color: var(--accent);
 }
 
-.boss-character {
-  font-size: 56px;
-}
 
 .speech-bubble {
   background: var(--bg);

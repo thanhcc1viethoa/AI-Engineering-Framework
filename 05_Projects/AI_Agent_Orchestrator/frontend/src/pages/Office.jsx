@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { api } from "../api";
+import { BossCaricature, WorkerCaricature } from "../components/Caricature";
 
 const AGENT_META = {
   antigravity: { label: "Antigravity", icon: "💻", desk: "code" },
@@ -17,12 +18,6 @@ function moodOf(agent) {
   if (agent.status === "BUSY") return "busy";
   return "idle";
 }
-
-const FACES = {
-  idle: "😌",
-  busy: "😣",
-  error: "😵",
-};
 
 const FLAVOR = {
   idle: "Rảnh rang, chưa có việc.",
@@ -87,7 +82,9 @@ export default function Office() {
             <span className="room-icon">🏢</span>
             <span className="room-title">Sếp Claude</span>
           </div>
-          <div className="character boss-character">🫃</div>
+          <div className="character boss-character">
+            <BossCaricature busy={totalBusy > 0} />
+          </div>
           <div className="speech-bubble">
             {totalBusy > 0
               ? `Đang có ${totalBusy} đứa cày việc, ${totalPending} việc trong hàng đợi. Tốt lắm!`
@@ -110,7 +107,9 @@ export default function Office() {
                 <span className="room-icon">{meta.icon}</span>
                 <span className="room-title">{meta.label}</span>
               </div>
-              <div className={`character worker-character mood-${mood}`}>{FACES[mood]}</div>
+              <div className={`character worker-character mood-${mood}`}>
+                <WorkerCaricature mood={mood} />
+              </div>
               <div className="worker-task">
                 {agent?.current_task ? `Đang làm: ${agent.current_task}` : FLAVOR[mood]}
               </div>
