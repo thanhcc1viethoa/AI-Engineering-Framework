@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, NavLink, Outlet, Route, Routes } from "react-r
 import { getToken, setToken } from "./api";
 import AgentMonitor from "./pages/AgentMonitor";
 import Login from "./pages/Login";
+import Office from "./pages/Office";
 import Overview from "./pages/Overview";
 import Settings from "./pages/Settings";
 import SystemLogs from "./pages/SystemLogs";
@@ -28,6 +29,7 @@ function Layout() {
         <NavLink to="/" end>
           Tổng quan
         </NavLink>
+        <NavLink to="/office">Văn phòng</NavLink>
         <NavLink to="/agents">Giám sát Agent</NavLink>
         <NavLink to="/tasks">Quản lý nhiệm vụ</NavLink>
         <NavLink to="/workflows">Workflow</NavLink>
@@ -53,6 +55,7 @@ export default function App() {
         <Route element={<RequireAuth />}>
           <Route element={<Layout />}>
             <Route path="/" element={<Overview />} />
+            <Route path="/office" element={<Office />} />
             <Route path="/agents" element={<AgentMonitor />} />
             <Route path="/tasks" element={<TaskManager />} />
             <Route path="/workflows" element={<Workflow />} />

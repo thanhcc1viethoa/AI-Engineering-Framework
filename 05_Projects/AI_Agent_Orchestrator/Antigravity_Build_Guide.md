@@ -51,7 +51,7 @@ MCP Server (`mcp_server/`) là cổng duy nhất để Claude Desktop nói chuy�
 05_Projects/AI_Agent_Orchestrator/
 ├── README.md / Requirement.md / Antigravity_Build_Guide.md (file này)
 ├── backend/        FastAPI: Task/Agent/Workflow Manager, SQLite, log, report
-├── frontend/       React dashboard (7 trang)
+├── frontend/       React dashboard (8 trang)
 ├── mcp_server/     MCP tools cho Claude Desktop
 ├── agents/{antigravity,muse,python,qa,publisher}/   adapter cho từng agent
 ├── workflows/      định nghĩa workflow (task graph) đã lưu
@@ -401,7 +401,7 @@ Theo yêu cầu bổ sung của người dùng (ưu tiên tự động hóa tạ
 
 # 11. GIAI ĐOẠN 8 — Web Dashboard (FR-012 → FR-019)
 
-Toàn bộ giao diện bằng tiếng Việt (NFR-006). Gợi ý: React Router cho 7 trang, một hook `useOrchestratorSocket()` lắng nghe `/ws` để cập nhật realtime, gọi REST (mục 6.3) cho các thao tác CRUD.
+Toàn bộ giao diện bằng tiếng Việt (NFR-006). Gợi ý: React Router cho 8 trang, một hook `useOrchestratorSocket()` lắng nghe `/ws` để cập nhật realtime, gọi REST (mục 6.3) cho các thao tác CRUD.
 
 | Trang | Route | Dữ liệu/API chính |
 | ----- | ----- | -------------------- |

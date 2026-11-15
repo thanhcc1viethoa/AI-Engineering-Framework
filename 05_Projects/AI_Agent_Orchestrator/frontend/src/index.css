@@ -268,3 +268,143 @@ th {
   color: var(--muted);
   font-size: 18px;
 }
+
+/* Văn phòng — Office page */
+.office-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.room {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.room-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.room-icon {
+  font-size: 18px;
+}
+
+.character {
+  font-size: 44px;
+  line-height: 1;
+  margin: 4px 0;
+}
+
+.worker-character.mood-busy {
+  animation: office-wiggle 0.6s ease-in-out infinite;
+}
+
+.worker-character.mood-error {
+  animation: office-shake 0.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .worker-character.mood-busy,
+  .worker-character.mood-error {
+    animation: none;
+  }
+}
+
+@keyframes office-wiggle {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+
+@keyframes office-shake {
+  0%, 100% { transform: translateX(-2px); }
+  50% { transform: translateX(2px); }
+}
+
+.boss-room {
+  background: linear-gradient(180deg, rgba(79, 125, 251, 0.12), var(--panel));
+  border-color: var(--accent);
+}
+
+.boss-character {
+  font-size: 56px;
+}
+
+.speech-bubble {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  color: var(--muted);
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.boss-status {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.worker-task {
+  font-size: 12.5px;
+  color: var(--muted);
+  min-height: 32px;
+}
+
+.hp-track {
+  width: 100%;
+  height: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.hp-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.hp-fill.hp-idle {
+  background: var(--border);
+}
+
+.hp-fill.hp-busy {
+  background: linear-gradient(90deg, var(--ok), var(--warn));
+}
+
+.hp-fill.hp-error {
+  background: var(--err);
+}
+
+.hp-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.worker-error {
+  font-size: 11px;
+  color: var(--err);
+  background: rgba(240, 79, 79, 0.12);
+  border-radius: 6px;
+  padding: 4px 6px;
+}

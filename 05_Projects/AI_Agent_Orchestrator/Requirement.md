@@ -12,7 +12,7 @@
 | -------------- | -------------------------------------- |
 | Project Name   | AI_Agent_Orchestrator                  |
 | Requirement ID | REQ-001                                |
-| Version        | 0.1.4                                  |
+| Version        | 0.1.5                                  |
 | Status         | Draft                                  |
 | Author         |                                        |
 | Owner          |                                        |
@@ -55,7 +55,7 @@ The user currently has separate tools (Claude Desktop, an Antigravity coding age
 * A Python Automation Agent that executes automation tasks dispatched by the Orchestrator.
 * A QA Agent that checks the output of completed tasks/workflows.
 * A Publisher Agent that posts a video to YouTube, TikTok, or Instagram via each platform's real, documented API (FR-033–FR-036).
-* A React web dashboard (7 pages, see **FR-012**–**FR-018**) communicating with the backend over REST API and WebSocket.
+* A React web dashboard (8 pages, see **FR-012**–**FR-018**, **FR-039**) communicating with the backend over REST API and WebSocket.
 * SQLite-backed persistence of tasks, agents, and history.
 * Windows background operation: install/start/stop/restart/health-check/backup PowerShell scripts, and autostart with Windows after testing passes.
 * Security controls: no hardcoded secrets, path validation before write/delete, confirmation gates on destructive or out-of-scope actions, no unsolicited internet exposure.
@@ -165,6 +165,7 @@ No Compliance Requirements were specified in the source request.
 | FR-036 | Integrate Instagram via the real Meta Graph API (`POST /{ig_user_id}/media` with `media_type=REELS` + `video_url`, poll `status_code`, then `POST /{ig_user_id}/media_publish`). The API only accepts an already-public `video_url`, not a local file — this Orchestrator does not host the file for the caller; the caller must supply a reachable URL. | Technical | Medium | | User Request (follow-up) | Draft |
 | FR-037 | A successfully executed Antigravity coding task shall never be marked COMPLETED automatically. It is recorded as REVIEW (with its files and, if `test_command` was given, test result) until Claude approves it (`review_task`, decision `approve` → COMPLETED) or rejects it with feedback (decision `reject` → the same task is re-dispatched with that feedback appended to its instructions, up to `MAX_FIX_RETRIES` rejections before it is marked FAILED). Muse4AI's own `needs_review` REVIEW state is unaffected — it has no programmatic resolution; the user checks it in the Muse4AI app. | Functional | High | | User Request (follow-up — "Antigravity Agent subsystem" spec) | Draft |
 | FR-038 | A dashboard operator may approve or reject a REVIEW-status Antigravity task directly (Task Manager page), equivalent to calling `review_task`. | Functional | Medium | | User Request (follow-up) | Draft |
+| FR-039 | Dashboard — "Văn phòng" (Office) page: a lightweight, playful at-a-glance view showing each agent as a character whose mood (idle/busy/error) and a "health bar" (pending+running task count for that agent) reflect its real, live status from `/agents` and `/tasks` — never a static illustration. Optional/cosmetic; does not replace the Agent Monitor or Task Manager pages' detail. | Functional | Low | | User Request (follow-up) | Draft |
 
 Rules:
 
@@ -373,6 +374,7 @@ No success metrics beyond the Acceptance Criteria above were specified in the so
 | 0.1.2 | 2026-11-15 | | Updated AS-001/Dependencies: identified Antigravity's real headless CLI flag (`--print`/`--print-timeout`, from Google's own docs) and clarified that Antigravity Desktop (2.0) is a separate, non-scriptable GUI app — FR-007 integrates the CLI only |
 | 0.1.3 | 2026-11-15 | | Added FR-033–FR-036 (Publisher Agent: YouTube/TikTok/Instagram), AS-005–AS-007, AC-013–AC-015; updated FR-004/FR-006/Purpose/Scope; follow-up request reprioritized video+publishing over coding |
 | 0.1.4 | 2026-11-15 | | Renamed task statuses QUEUED→ASSIGNED, WAITING→REVIEW per the "Antigravity Agent subsystem" follow-up spec; added FR-037/FR-038 (REVIEW gate: a coding task is never auto-COMPLETED, review_task approves/rejects it), AC-016/AC-017; FR-003/FR-006/FR-007 updated accordingly |
+| 0.1.5 | 2026-11-15 | | Added FR-039: the Dashboard's playful "Văn phòng" (Office) page — per-agent character + live HP bar driven by real /agents and /tasks data, requested as an at-a-glance progress view |
 
 ---
 
@@ -412,3 +414,4 @@ No success metrics beyond the Acceptance Criteria above were specified in the so
 | 0.1.2   | 2026-11-15 |        | Identified Antigravity's real headless CLI syntax and clarified the CLI-vs-Desktop-app distinction; updated AS-001/Dependencies |
 | 0.1.3   | 2026-11-15 |        | Added Publisher Agent (FR-033–FR-036, AS-005–AS-007, AC-013–AC-015) for YouTube/TikTok/Instagram, per a follow-up request deprioritizing coding in favor of video generation + publishing |
 | 0.1.4   | 2026-11-15 |        | Renamed task statuses (QUEUED→ASSIGNED, WAITING→REVIEW) and added the Antigravity REVIEW gate (FR-037/FR-038, review_task tool, AC-016/AC-017) per a follow-up "Antigravity Agent subsystem" spec |
+| 0.1.5   | 2026-11-15 |        | Added FR-039 and the Dashboard's "Văn phòng" (Office) page |

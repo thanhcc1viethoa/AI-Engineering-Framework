@@ -169,6 +169,7 @@ Mở trình duyệt vào `http://127.0.0.1:5173`, nhập mật khẩu bạn đ�
 | Trang | Dùng để |
 | ----- | ------- |
 | **Tổng quan** | Xem nhanh số agent, số task đang chạy/xong/lỗi, số video — cập nhật realtime |
+| **Văn phòng** | Xem vui: mỗi agent là một nhân vật trong "phòng" riêng, mặt nhăn nhó khi bận/lỗi, có thanh máu = số việc đang chờ/chạy — hết việc là hết máu (nghỉ). Dữ liệu thật, không phải hình tĩnh. |
 | **Giám sát Agent** | Xem 6 agent (Claude, Antigravity, Muse, Python, QA, Publisher) đang rảnh hay bận, lỗi gần nhất |
 | **Quản lý nhiệm vụ** | **Tự tạo task thủ công** (không cần qua Claude Desktop): chọn agent, nhập payload JSON, bấm "Tạo nhiệm vụ"; xem kết quả, dừng task đang chạy; với task Antigravity ở trạng thái `REVIEW` có thêm nút **Duyệt**/**Từ chối** (từ chối sẽ hỏi phản hồi rồi giao lại cho Antigravity sửa) |
 | **Workflow** | Nhập `workflow_id` để xem sơ đồ các bước và trạng thái từng bước |

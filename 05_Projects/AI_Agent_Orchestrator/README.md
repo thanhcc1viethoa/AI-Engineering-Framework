@@ -10,7 +10,7 @@ A Windows-hosted multi-agent orchestration system: Claude manages, Antigravity C
 | `Architecture.md` | Not yet created (this README + code stand in for it until drafted) |
 | Backend (`backend/`) | Implemented and tested in this build — 37/37 pytest passing |
 | MCP Server (`mcp_server/`) | Implemented — all 14 tools (11 original + publish_video/get_publish_status + review_task) verified end-to-end against a running backend |
-| Dashboard (`frontend/`) | Implemented — all 7 pages verified in a real browser (Playwright), builds cleanly |
+| Dashboard (`frontend/`) | Implemented — all 8 pages verified in a real browser (Playwright), builds cleanly |
 | Antigravity adapter (`agents/antigravity/`) | Code written, **not verified against a real `agy` CLI** — see AS-001. Implements a REVIEW gate (FR-037/FR-038): a successful run is never auto-COMPLETED, it waits for `review_task` (approve/reject with feedback) or a Dashboard click — verified with 7 tests (mocked CLI). |
 | Muse4AI adapter (`agents/muse/`) | Rewritten against Muse4AI's real, public API contract ([github.com/andrew-babo/muse4ai](https://github.com/andrew-babo/muse4ai)) and verified against a mock server replaying it — **not yet run against a live Muse4AI instance** (needs the user's Windows PC + a signed-in Muse account). See AS-002. |
 | Publisher Agent (`agents/publisher/`) | YouTube/TikTok/Instagram adapters written against each platform's real, public API docs and verified against mocked HTTP (19 tests) — **none run against a live account/app**; Instagram also has a real unsolved gap (needs a public `video_url`, not a local file). See AS-005–AS-007. |
@@ -35,7 +35,7 @@ run on the target machine to confirm.
 | Path | Purpose |
 | ---- | ------- |
 | `backend/` | FastAPI Orchestrator: Task/Agent/Workflow Manager, SQLite, logging, reports |
-| `frontend/` | React web dashboard (7 pages) |
+| `frontend/` | React web dashboard (8 pages, incl. the playful "Office" status view) |
 | `mcp_server/` | MCP tools exposed to Claude Desktop |
 | `agents/antigravity/` | Adapter to the Antigravity CLI (coding agent) |
 | `agents/muse/` | Adapter to [Muse4AI](https://github.com/andrew-babo/muse4ai) (local app that automates the user's own Meta Muse session; video agent) |
