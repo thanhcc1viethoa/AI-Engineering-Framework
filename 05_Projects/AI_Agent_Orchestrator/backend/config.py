@@ -25,6 +25,13 @@ MUSE4AI_BASE_URL = os.getenv("MUSE4AI_BASE_URL", "http://127.0.0.1:47821/v1")
 
 ANTIGRAVITY_CLI_PATH = os.getenv("ANTIGRAVITY_CLI_PATH", "agy")
 
+# Publisher Agent — one set of credentials per platform; see
+# agents/publisher/README.md for how the user obtains each one.
+YOUTUBE_TOKEN_PATH = str(_PROJECT_ROOT / "config" / os.getenv("YOUTUBE_TOKEN_FILENAME", "youtube_token.json"))
+TIKTOK_ACCESS_TOKEN = os.getenv("TIKTOK_ACCESS_TOKEN", "")
+INSTAGRAM_ACCESS_TOKEN = os.getenv("INSTAGRAM_ACCESS_TOKEN", "")
+INSTAGRAM_IG_USER_ID = os.getenv("INSTAGRAM_IG_USER_ID", "")
+
 DASHBOARD_JWT_SECRET = os.getenv("DASHBOARD_JWT_SECRET", "")
 DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "")
 DASHBOARD_TOKEN_TTL_SECONDS = int(os.getenv("DASHBOARD_TOKEN_TTL_SECONDS", "43200"))  # 12h

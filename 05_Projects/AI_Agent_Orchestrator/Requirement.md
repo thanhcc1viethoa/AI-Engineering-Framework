@@ -12,7 +12,7 @@
 | -------------- | -------------------------------------- |
 | Project Name   | AI_Agent_Orchestrator                  |
 | Requirement ID | REQ-001                                |
-| Version        | 0.1.2                                  |
+| Version        | 0.1.3                                  |
 | Status         | Draft                                  |
 | Author         |                                        |
 | Owner          |                                        |
@@ -24,12 +24,12 @@
 
 # Purpose
 
-Provide a Windows-hosted multi-agent orchestration system in which Claude acts as the managing agent, dispatching work to specialized executor agents (a coding agent via Google Antigravity CLI, a video-generation agent via Muse4AI/Meta Muse, a Python automation agent, and a QA agent) and reporting consolidated results back to the user through Claude Desktop and a web dashboard.
+Provide a Windows-hosted multi-agent orchestration system in which Claude acts as the managing agent, dispatching work to specialized executor agents (a coding agent via Google Antigravity CLI, a video-generation agent via Muse4AI/Meta Muse, a Python automation agent, a QA agent, and a Publisher Agent that posts the generated video to YouTube/TikTok/Instagram) and reporting consolidated results back to the user through Claude Desktop and a web dashboard.
 
 * Why the project exists: let the user issue one high-level request and have it decomposed, executed by the right specialized agent, quality-checked, and reported on automatically, instead of operating each tool manually.
-* Expected outcomes: a running Orchestrator (backend + MCP server + dashboard) on the user's Windows machine that can accept a request from Claude Desktop or the dashboard, execute it through one or more agents, and return a verified result.
-* Business value: reduces manual coordination between separate AI/automation tools (coding, video generation, scripting, QA) into a single managed workflow.
-* Success criteria: the 12 criteria defined in **Acceptance Criteria** below are all met.
+* Expected outcomes: a running Orchestrator (backend + MCP server + dashboard) on the user's Windows machine that can accept a request from Claude Desktop or the dashboard, execute it through one or more agents — including generating a video and publishing it to a chosen platform — and return a verified result.
+* Business value: reduces manual coordination between separate AI/automation tools (coding, video generation, scripting, QA, social publishing) into a single managed workflow.
+* Success criteria: the criteria defined in **Acceptance Criteria** below are all met.
 
 ---
 
@@ -40,7 +40,7 @@ The user currently has separate tools (Claude Desktop, an Antigravity coding age
 * Existing problems: no shared task queue or history across tools; no automatic hand-off between a coding task and a QA check; no single dashboard to see what every agent is doing.
 * Current workflow: the user or Claude invokes each tool manually and manually tracks progress and results.
 * Existing limitations: no persistence of task/agent state, no background service, no autostart with Windows, no web visibility into agent activity.
-* Motivation: the user supplied a complete design ("MASTER PROMPT – TRIỂN KHAI HỆ THỐNG AI AGENT ORCHESTRATOR TRÊN WINDOWS") specifying the target architecture, phased delivery plan, and acceptance criteria for this system; this document formalizes that request as a governed Requirement per the repository's `/create` workflow.
+* Motivation: the user supplied a complete design ("MASTER PROMPT – TRIỂN KHAI HỆ THỐNG AI AGENT ORCHESTRATOR TRÊN WINDOWS") specifying the target architecture, phased delivery plan, and acceptance criteria for this system; this document formalizes that request as a governed Requirement per the repository's `/create` workflow. A follow-up request after initial implementation said coding (Antigravity) was a lower priority than automating video creation and posting it to platforms, "easy to extend to other work" — FR-033 to FR-036 (Publisher Agent) capture that follow-up.
 
 ---
 
@@ -54,6 +54,7 @@ The user currently has separate tools (Claude Desktop, an Antigravity coding age
 * Integration with Muse4AI / Meta Muse as the video-generation agent, via its officially documented API/MCP.
 * A Python Automation Agent that executes automation tasks dispatched by the Orchestrator.
 * A QA Agent that checks the output of completed tasks/workflows.
+* A Publisher Agent that posts a video to YouTube, TikTok, or Instagram via each platform's real, documented API (FR-033–FR-036).
 * A React web dashboard (7 pages, see **FR-012**–**FR-018**) communicating with the backend over REST API and WebSocket.
 * SQLite-backed persistence of tasks, agents, and history.
 * Windows background operation: install/start/stop/restart/health-check/backup PowerShell scripts, and autostart with Windows after testing passes.
@@ -68,6 +69,8 @@ The user currently has separate tools (Claude Desktop, an Antigravity coding age
 * Installing software that duplicates an already-installed, working component.
 * Modifying or deleting any existing MCP Server configuration without explicit user confirmation.
 * Any component of this repository's own governance tooling (`02_Policies/`, `04_Prompts/`, `06_Tools/`) — those remain owned by the repository, not by this project.
+* Hosting a locally generated video at a public URL for Instagram's API (FR-036) — the caller must supply an already-public `video_url`; a tunnel/hosting solution is a candidate future extension, not built here.
+* Getting a TikTok app through TikTok's Content Posting API audit, or a Meta app through App Review — those are the user's own developer-account actions on each platform, outside this codebase.
 
 ---
 
@@ -127,9 +130,9 @@ No Compliance Requirements were specified in the source request.
 | FR-001 | Survey the target Windows machine (OS version, CPU, RAM, disk incl. target drive free space, Python/pip, Node.js/npm, Antigravity IDE, Antigravity CLI, Claude Desktop, Muse4AI, existing MCP Server configs, potentially conflicting running processes) via PowerShell before any installation, and produce a written environment report. | Technical | Critical | | User Request | Draft |
 | FR-002 | Create the install directory structure (backend, frontend, mcp_server, agents/{antigravity,muse,python,qa}, workflows, projects, output/{videos,code,reports}, database, logs, config, scripts, backup) under the install root. | Technical | Critical | | User Request | Draft |
 | FR-003 | Implement a Task Manager module persisting tasks with fields Task ID, Task Name, Description, Assigned Agent, Priority, Status, Created At, Started At, Completed At, Result, Error Message, Output Path, and status values PENDING, QUEUED, RUNNING, WAITING, COMPLETED, FAILED, CANCELLED. | Functional | Critical | | User Request | Draft |
-| FR-004 | Implement an Agent Manager module registering Claude Manager, Antigravity Agent, Muse Agent, Python Agent, and QA Agent, each with ID, Name, Type, Status, Capabilities, Current Task, Last Active, Error Log. | Functional | Critical | | User Request | Draft |
+| FR-004 | Implement an Agent Manager module registering Claude Manager, Antigravity Agent, Muse Agent, Python Agent, QA Agent, and Publisher Agent, each with ID, Name, Type, Status, Capabilities, Current Task, Last Active, Error Log. | Functional | Critical | | User Request | Draft |
 | FR-005 | Implement a Workflow Manager that decomposes one incoming request into an ordered set of tasks, assigns each task to the appropriate agent, and supports sequential execution plus parallel execution for independent tasks. | Functional | Critical | | User Request | Draft |
-| FR-006 | Implement an MCP Server exposing exactly these tools to Claude Desktop, each with a documented description, parameters, types, and return schema, implementing only functionality that is actually built: `submit_task`, `get_task_status`, `get_task_result`, `list_tasks`, `cancel_task`, `get_agent_status`, `list_agents`, `execute_workflow`, `create_video`, `get_video_status`, `get_system_status`. | Technical | Critical | | User Request | Draft |
+| FR-006 | Implement an MCP Server exposing exactly these tools to Claude Desktop, each with a documented description, parameters, types, and return schema, implementing only functionality that is actually built: `submit_task`, `get_task_status`, `get_task_result`, `list_tasks`, `cancel_task`, `get_agent_status`, `list_agents`, `execute_workflow`, `create_video`, `get_video_status`, `get_system_status`, `publish_video`, `get_publish_status`. | Technical | Critical | | User Request | Draft |
 | FR-007 | Integrate the Antigravity CLI as the coding/execution agent: verify installation and login, verify current CLI syntax/parameters, use its non-interactive mode if supported, dispatch tasks from Python, receive structured results, log execution, track duration, handle timeouts and errors, and allow a controlled re-run of a failed task. Each task is scoped to an authorized project directory; Antigravity's full permission-bypass mode shall not be used. | Technical | High | | User Request | Draft |
 | FR-008 | Integrate Muse4AI (github.com/andrew-babo/muse4ai — a local, unofficial Windows app that automates the user's own signed-in Meta Muse session; not a Meta cloud API) as the video agent via its documented local REST API (`http://127.0.0.1:47821/v1`): verify connection (`GET /v1/status`), submit a video-generation request (`POST /v1/jobs`), receive a job id, poll status, download the completed output when `succeeded`, and log errors and duration. Duplicate concurrent video-generation submissions for the same request shall be prevented. A `needs_review` job status shall be surfaced for human review, never auto-retried. | Technical | High | | User Request | Draft |
 | FR-009 | Implement a Python Automation Agent that executes automation tasks dispatched by the Orchestrator and returns a structured result. | Functional | Medium | | User Request | Draft |
@@ -156,6 +159,10 @@ No Compliance Requirements were specified in the source request.
 | FR-030 | Destructive operations, software installation, system configuration changes, or any action outside the authorized scope require explicit user confirmation before execution. | Non-Functional | Critical | | User Request | Draft |
 | FR-031 | Implementation shall proceed only through the 10 defined phases (environment survey; directory/Python/Node setup; backend+DB; MCP server; Antigravity integration; Muse4AI integration; Claude Desktop integration; web dashboard; full system test; background/autostart), with each phase's results checked, files inventoried, tests run, and defects fixed before the next phase begins. | Operational | Critical | | User Request | Draft |
 | FR-032 | Existing installed software and existing MCP Server configurations shall be detected and reused; they shall not be deleted or overwritten without explicit user confirmation. | Operational | Critical | | User Request | Draft |
+| FR-033 | Implement a Publisher Agent that posts a generated video to a specified social platform, routed by `payload.platform` (`youtube`\|`tiktok`\|`instagram`) rather than a separate `assigned_agent` value per platform, so a new platform can be added as one adapter module plus one dispatcher branch. | Functional | High | | User Request (follow-up) | Draft |
+| FR-034 | Integrate YouTube via the real YouTube Data API v3 (`videos.insert`, resumable upload, OAuth scope `youtube.upload`). An unaudited/unverified Google Cloud API project is restricted by YouTube itself to private/unlisted uploads regardless of the requested `privacy_status`. | Technical | High | | User Request (follow-up) | Draft |
+| FR-035 | Integrate TikTok via the real Content Posting API (`/v2/post/publish/video/init/`, chunked/FILE_UPLOAD, `/v2/post/publish/status/fetch/`). An unaudited TikTok API client is restricted by TikTok itself to `SELF_ONLY` (private) visibility and a 5-accounts-per-24h cap regardless of the requested `privacy_level`, until the app passes TikTok's separate Content Posting API audit. | Technical | High | | User Request (follow-up) | Draft |
+| FR-036 | Integrate Instagram via the real Meta Graph API (`POST /{ig_user_id}/media` with `media_type=REELS` + `video_url`, poll `status_code`, then `POST /{ig_user_id}/media_publish`). The API only accepts an already-public `video_url`, not a local file — this Orchestrator does not host the file for the caller; the caller must supply a reachable URL. | Technical | Medium | | User Request (follow-up) | Draft |
 
 Rules:
 
@@ -217,7 +224,7 @@ Rules:
 | ID     | Validation Method | Verified |
 | ------ | ------------------ | -------- |
 | FR-001 | Inspection of the environment report produced from the survey script output | No |
-| FR-006 | Test — call each of the 11 MCP tools from Claude Desktop and confirm documented behavior | No |
+| FR-006 | Test — call each of the 13 MCP tools from Claude Desktop and confirm documented behavior | No |
 | FR-007 | Demonstration — dispatch one real coding task to Antigravity and confirm a structured result is returned | No |
 | FR-008 | Demonstration — generate one real test video via Muse4AI and confirm the job completes | No |
 | FR-020 | Demonstration — submit one multi-step request end-to-end and confirm Claude's final report matches verified task results | No |
@@ -244,6 +251,9 @@ Rules:
 | AS-002 | Muse4AI's API contract is as documented in its own public repository (github.com/andrew-babo/muse4ai: REST + MCP on `http://127.0.0.1:47821`, `POST /v1/jobs` with `{kind, prompt, repeat, account}` — no duration/resolution/style parameter — returning `{jobs: [...]}`, job statuses `queued/running/needs_review/succeeded/failed/cancelled`). | Partially validated — the adapter (`agents/muse/adapter.py`) was rewritten against that repository's actual OpenAPI document (`desktop/src/shared/api/openapi.ts`) and `agent-kit/muse4ai/references/*.md`, and tested against a mock server replaying that exact contract (`agents/muse/test_adapter.py`). Still unverified: real runtime behavior against a live Muse4AI instance with a signed-in Muse account, and account-specific quotas — Muse4AI is itself an unofficial automation of Meta's web UI, so its real-world reliability depends on Meta's site not changing. | Code review against the real repo (done, 2026-11-15) + a live run on the user's Windows machine (pending) | 2026-11-15 (partial) | |
 | AS-003 | The target Windows machine's actual specifications (OS build, CPU, RAM, free disk space on the install drive, installed Python/Node versions, existing MCP Server configurations, running services) are unknown to this session. This Claude Code session runs in an isolated cloud container with no filesystem or network access to the user's Windows machine, and no Remote Control connection to it is currently established. | Unvalidated | User executes the Phase 1 PowerShell survey script locally and returns its output | | |
 | AS-004 | Numeric bounds for maximum fix-retry count, maximum task execution time, and maximum concurrent tasks (FR-021) are not specified in the source request. | Unvalidated | To be defined in Architecture.md and confirmed with the user | | |
+| AS-005 | YouTube Data API v3's `videos.insert` resumable-upload protocol and OAuth token-refresh endpoint are as documented at developers.google.com (confirmed via search, not a direct fetch of that page from this session). | Partially validated — `agents/publisher/youtube.py` implements this contract and is tested against mocked HTTP responses shaped like it (`agents/publisher/test_youtube.py`). Unverified: a live upload with a real Google Cloud project and OAuth consent (needs `scripts/setup_youtube_oauth.py` run by the user). | Code review against public docs (done, 2026-11-15) + a live run on the user's machine (pending) | 2026-11-15 (partial) | |
+| AS-006 | TikTok's Content Posting API v2 (`/post/publish/video/init/`, `/post/publish/status/fetch/`) and its unaudited-app `SELF_ONLY`-visibility rule are as documented at developers.tiktok.com (confirmed via search). | Partially validated — `agents/publisher/tiktok.py` implements this contract and is tested against mocked HTTP responses (`agents/publisher/test_tiktok.py`). Unverified: a live post with a real TikTok Developer app and user OAuth consent. | Code review against public docs (done, 2026-11-15) + a live run on the user's machine (pending) | 2026-11-15 (partial) | |
+| AS-007 | Instagram's Graph API content-publishing flow (`POST /{ig_user_id}/media` with `media_type=REELS` + `video_url`, then `/media_publish`) is as documented at developers.facebook.com, including that `video_url` must already be public (confirmed via search). | Partially validated — `agents/publisher/instagram.py` implements this contract and is tested against mocked HTTP responses (`agents/publisher/test_instagram.py`). Unverified: a live post with a real Meta app, Instagram Business account, and — separately — how the caller obtains a public `video_url` for a locally generated file (not solved by this project; see FR-036). | Code review against public docs (done, 2026-11-15) + a live run on the user's machine (pending) | 2026-11-15 (partial) | |
 
 ---
 
@@ -270,6 +280,9 @@ Rules:
 | SQLite | Embedded database | Bundled with the backend |
 | FastAPI | Backend framework | — |
 | React | Frontend framework | — |
+| YouTube Data API v3 + a Google Cloud project/OAuth app | External API | Contract confirmed from public docs; needs the user's own project + one-time OAuth consent — see AS-005 |
+| TikTok Content Posting API + a TikTok Developer app | External API | Contract confirmed from public docs; unaudited apps limited to private posts — see AS-006 |
+| Instagram (Meta) Graph API + a Facebook Page/Instagram Business account | External API | Contract confirmed from public docs; requires a public `video_url`, not solved by this project — see AS-007/FR-036 |
 
 ---
 
@@ -282,6 +295,9 @@ Rules:
 | R-003 | The target machine lacks sufficient disk/RAM once surveyed | Low | High | Phase 1 survey gates every later phase |
 | R-004 | No live Remote Control connection slows iteration to a manual copy/paste loop | High | Medium | Provide complete, copy-paste-ready PowerShell scripts per phase (NFR-003) |
 | R-005 | Project scope (10 phases, 5 agent types, full dashboard) risks partial or unverified delivery | Medium | High | Enforce FR-031 phase gating with verification before proceeding |
+| R-006 | TikTok's Content Posting API audit (needed to lift the SELF_ONLY/private-only restriction) has undocumented criteria and can reportedly take weeks | Medium | Medium | Default to SELF_ONLY until the user confirms the app passed TikTok's audit; do not assume public posting works |
+| R-007 | Instagram's Graph API needs a public `video_url`, which this project does not provide for a locally generated video | High | Medium | Document the gap plainly (FR-036); the user supplies their own hosting, or a tunnel to the Orchestrator's own files is added later |
+| R-008 | A platform (Google/TikTok/Meta) changes its API without notice | Low | Medium | Adapters isolate each platform in one module (`agents/publisher/<platform>.py`); a breaking change is a contained fix, not a system-wide one |
 
 ---
 
@@ -301,6 +317,9 @@ Rules:
 | AC-010 | The Task Manager persists history. | Inspection |
 | AC-011 | Services can be stopped and restarted. | Test |
 | AC-012 | The system does not lose existing configuration or data. | Inspection |
+| AC-013 | Claude can publish a real video to YouTube via `publish_video` and get back a real video id/URL. | Demonstration |
+| AC-014 | Claude can publish a real video to TikTok via `publish_video`; if the app is unaudited, the result is a real private (SELF_ONLY) post, not a fabricated success. | Demonstration |
+| AC-015 | Claude can publish to Instagram via `publish_video` given an already-public `video_url`. | Demonstration |
 
 ---
 
@@ -337,7 +356,7 @@ No success metrics beyond the Acceptance Criteria above were specified in the so
 
 | Requirement ID | Parent Requirement | Architecture | ADR | Review | Test | Issue | Commit |
 | -------------- | ------------------- | ------------- | --- | ------ | ---- | ----- | ------ |
-| FR-001 to FR-032 | — | | | | | | |
+| FR-001 to FR-036 | — | | | | | | |
 
 ---
 
@@ -348,6 +367,7 @@ No success metrics beyond the Acceptance Criteria above were specified in the so
 | 0.1.0 | 2026-11-15 | | Initial draft from the user's master prompt |
 | 0.1.1 | 2026-11-15 | | Corrected FR-008/AS-002/Dependencies: Muse4AI identified as github.com/andrew-babo/muse4ai (local app, not a cloud API); renamed FR-022's `backup.ps1` to `backup_config.ps1` (Naming_Policy.md reserved name) |
 | 0.1.2 | 2026-11-15 | | Updated AS-001/Dependencies: identified Antigravity's real headless CLI flag (`--print`/`--print-timeout`, from Google's own docs) and clarified that Antigravity Desktop (2.0) is a separate, non-scriptable GUI app — FR-007 integrates the CLI only |
+| 0.1.3 | 2026-11-15 | | Added FR-033–FR-036 (Publisher Agent: YouTube/TikTok/Instagram), AS-005–AS-007, AC-013–AC-015; updated FR-004/FR-006/Purpose/Scope; follow-up request reprioritized video+publishing over coding |
 
 ---
 
@@ -384,3 +404,4 @@ No success metrics beyond the Acceptance Criteria above were specified in the so
 | 0.1.0   | 2026-11-15 |        | Initial draft requirement for AI_Agent_Orchestrator, derived from the user's master prompt |
 | 0.1.1   | 2026-11-15 |        | Identified Muse4AI as github.com/andrew-babo/muse4ai and corrected FR-008/AS-002/Dependencies accordingly; renamed `backup.ps1` to `backup_config.ps1` per Naming_Policy.md |
 | 0.1.2   | 2026-11-15 |        | Identified Antigravity's real headless CLI syntax and clarified the CLI-vs-Desktop-app distinction; updated AS-001/Dependencies |
+| 0.1.3   | 2026-11-15 |        | Added Publisher Agent (FR-033–FR-036, AS-005–AS-007, AC-013–AC-015) for YouTube/TikTok/Instagram, per a follow-up request deprioritizing coding in favor of video generation + publishing |

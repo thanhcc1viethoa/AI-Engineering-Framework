@@ -1,7 +1,8 @@
 """MCP Server — Requirement.md FR-006/FR-011.
 
-Exposes exactly the 11 tools defined in Antigravity_Build_Guide.md section 7
-to Claude Desktop. Every tool is a thin, honest wrapper over the Orchestrator
+Exposes exactly the 13 tools defined in Antigravity_Build_Guide.md section 7
+(the original 11 plus publish_video/get_publish_status for the Publisher
+Agent) to Claude Desktop. Every tool is a thin, honest wrapper over the Orchestrator
 REST API (backend/) — it calls a real endpoint and returns its real response,
 never a fabricated result.
 
@@ -222,6 +223,66 @@ def get_video_status(task_id: str) -> dict:
 @mcp.tool(description="Get overall system status: agent counts, task counts by outcome, videos created, uptime.")
 def get_system_status() -> dict:
     return _call("GET", "/system/status")
+
+
+@mcp.tool(
+    description=(
+        "Publish a video to YouTube, TikTok, or Instagram via the Publisher Agent, using each "
+        "platform's real API (not a generic one — parameters differ by platform). YouTube and "
+        "TikTok need a local `video_path` (e.g. an output_path from a completed create_video "
+        "task); Instagram needs an already-public `video_url` — it cannot post a local file "
+        "directly. An unaudited TikTok app is forced to SELF_ONLY (private) visibility "
+        "regardless of `privacy_level`."
+    )
+)
+def publish_video(
+    platform: Literal["youtube", "tiktok", "instagram"],
+    caption: str,
+    video_path: Optional[str] = None,
+    video_url: Optional[str] = None,
+    title: Optional[str] = None,
+    description: Optional[str] = None,
+    privacy_status: str = "private",
+    privacy_level: str = "SELF_ONLY",
+) -> dict:
+    payload = {"platform": platform, "caption": caption}
+    if video_path is not None:
+        payload["video_path"] = video_path
+    if video_url is not None:
+        payload["video_url"] = video_url
+    if title is not None:
+        payload["title"] = title
+    if description is not None:
+        payload["description"] = description
+    if platform == "youtube":
+        payload["privacy_status"] = privacy_status
+    if platform == "tiktok":
+        payload["privacy_level"] = privacy_level
+
+    return _call(
+        "POST",
+        "/tasks",
+        json={
+            "task_name": f"publish_video[{platform}]: {caption[:40]}",
+            "assigned_agent": "publisher",
+            "payload": payload,
+        },
+    )
+
+
+@mcp.tool(description="Check a publish_video task's status (same task_id publish_video returned).")
+def get_publish_status(task_id: str) -> dict:
+    task = _call("GET", f"/tasks/{task_id}")
+    if "error" in task:
+        return task
+    if task["assigned_agent"] != "publisher":
+        return {"error": f"Task {task_id} is not a publish task (assigned_agent={task['assigned_agent']})"}
+    return {
+        "task_id": task["task_id"],
+        "status": task["status"],
+        "result": task["result"],
+        "error_message": task["error_message"],
+    }
 
 
 if __name__ == "__main__":

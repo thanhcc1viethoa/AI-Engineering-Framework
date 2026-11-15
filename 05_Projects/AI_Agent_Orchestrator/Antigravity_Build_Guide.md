@@ -35,10 +35,10 @@ USER
             ├── Logging (logs/)      (NFR-004)
             └── Report Generator     (FR-020)
                        │
-         ┌─────────────┼───────────────┬──────────────┐
-         ▼             ▼               ▼              ▼
-  agents/antigravity agents/muse  agents/python   agents/qa
-  (Antigravity CLI)  (Muse4AI)    (automation)    (QA check)
+         ┌─────────────┼───────────────┬──────────────┬───────────────┐
+         ▼             ▼               ▼              ▼               ▼
+  agents/antigravity agents/muse  agents/python   agents/qa     agents/publisher
+  (Antigravity CLI)  (Muse4AI)    (automation)    (QA check)    (YouTube/TikTok/Instagram)
 ```
 
 MCP Server (`mcp_server/`) là cổng duy nhất để Claude Desktop nói chuyện với Orchestrator (FR-006, FR-011). Dashboard (`frontend/`) nói chuyện với backend qua REST + WebSocket (FR-019).
@@ -53,14 +53,14 @@ MCP Server (`mcp_server/`) là cổng duy nhất để Claude Desktop nói chuy�
 ├── backend/        FastAPI: Task/Agent/Workflow Manager, SQLite, log, report
 ├── frontend/       React dashboard (7 trang)
 ├── mcp_server/     MCP tools cho Claude Desktop
-├── agents/{antigravity,muse,python,qa}/   adapter cho từng agent
+├── agents/{antigravity,muse,python,qa,publisher}/   adapter cho từng agent
 ├── workflows/      định nghĩa workflow (task graph) đã lưu
 ├── projects/       thư mục làm việc riêng cho từng task Antigravity
 ├── output/{videos,code,reports}  sản phẩm sinh ra (không commit git)
 ├── database/       file SQLite (không commit git)
 ├── logs/           log runtime (không commit git)
-├── config/         cấu hình không chứa secret
-├── scripts/        install/start/stop/restart/health_check/backup .ps1
+├── config/         cấu hình không chứa secret (kể cả `youtube_token.json` — không commit)
+├── scripts/        install/start/stop/restart/health_check/backup_config .ps1 + setup_youtube_oauth.py
 └── backup/         bản sao lưu cấu hình (không commit git)
 ```
 
@@ -77,7 +77,7 @@ Sau mỗi giai đoạn: chạy thử thật → ghi log kết quả → sửa l�
 | 1 | Khảo sát môi trường Windows |
 | 2 | Thiết lập thư mục, Python venv, Node.js project |
 | 3 | Backend + Database |
-| 4 | MCP Server (11 tools) |
+| 4 | MCP Server (13 tools) |
 | 5 | Tích hợp Antigravity CLI |
 | 6 | Tích hợp Muse4AI |
 | 7 | Tích hợp Claude Desktop |
@@ -259,13 +259,13 @@ Mỗi endpoint ghi log request/response (trừ giá trị secret) vào `logs/orc
 
 ---
 
-# 7. GIAI ĐOẠN 4 — MCP Server (đúng 11 tool, không thêm/bớt)
+# 7. GIAI ĐOẠN 4 — MCP Server (13 tool: 11 tool gốc + 2 tool Publisher Agent)
 
 Mỗi tool bên dưới gọi thẳng endpoint tương ứng ở mục 6.3. Không tạo tool nào chưa có chức năng thật đứng sau nó (quy tắc trong master prompt gốc).
 
 | Tool | Tham số | Kiểu | Bắt buộc | Trả về |
 | ---- | ------- | ---- | -------- | ------ |
-| `submit_task` | `task_name`, `description`, `assigned_agent` (enum: antigravity\|muse\|python\|qa), `priority` (enum, mặc định Medium), `payload` (object, dữ liệu riêng của loại agent) | string/string/string/string/object | `task_name`, `description`, `assigned_agent` bắt buộc | `{task_id, status}` |
+| `submit_task` | `task_name`, `description`, `assigned_agent` (enum: antigravity\|muse\|python\|qa\|publisher), `priority` (enum, mặc định Medium), `payload` (object, dữ liệu riêng của loại agent) | string/string/string/string/object | `task_name`, `description`, `assigned_agent` bắt buộc | `{task_id, status}` |
 | `get_task_status` | `task_id` | string | bắt buộc | `{task_id, status, started_at, completed_at}` |
 | `get_task_result` | `task_id` | string | bắt buộc | `{task_id, status, result, error_message, output_path}` |
 | `list_tasks` | `status` (optional), `assigned_agent` (optional), `limit` (int, mặc định 50) | string/string/int | không | mảng task tóm tắt |
@@ -273,11 +273,11 @@ Mỗi tool bên dưới gọi thẳng endpoint tương ứng ở mục 6.3. Khô
 | `get_agent_status` | `agent_id` | string | bắt buộc | `{agent_id, name, type, status, current_task, last_active, error_log}` |
 | `list_agents` | — | — | — | mảng agent tóm tắt |
 | `execute_workflow` | `workflow_name`, `goal`, `steps` (optional — nếu bỏ trống, Workflow Manager tự phân rã `goal`) | string/string/array | `workflow_name`, `goal` bắt buộc | `{workflow_id, task_ids}` |
-| `create_video` | `prompt`, `duration_seconds` (optional), `resolution` (optional), `style` (optional) | string/int/string/string | `prompt` bắt buộc | `{task_id, status: "QUEUED"}` |
-| `get_video_status` | `task_id` | string | bắt buộc | `{task_id, job_id, status, progress}` |
+| `create_video` | `prompt`, `repeat` (int 1-4, mặc định 1), `account` (string, mặc định "auto") | string/int/string | `prompt` bắt buộc | `{task_id, status: "QUEUED"}` (Muse tự quyết định thời lượng/độ phân giải — API thật không có tham số này, xem Giai đoạn 6) |
+| `get_video_status` | `task_id` | string | bắt buộc | `{task_id, status, job_id, output_path}` |
 | `get_system_status` | — | — | — | `{agents_total, agents_active, tasks_running, tasks_completed, tasks_failed, videos_created, uptime_seconds}` |
-
-> Tham số của `create_video`/`get_video_status` có thể cần đổi tên/đơn vị cho khớp API thật của Muse4AI (xem Giai đoạn 6, AS-002) — xác nhận lại tài liệu Muse4AI trước khi chốt.
+| `publish_video` | `platform` (enum: youtube\|tiktok\|instagram), `caption`, `video_path` (youtube/tiktok), `video_url` (instagram — bắt buộc là URL công khai), `title`, `description`, `privacy_status` (youtube), `privacy_level` (tiktok, mặc định SELF_ONLY) | string/string/string/string/string/string/string/string | `platform`, `caption` bắt buộc | `{task_id, status: "QUEUED"}` — xem Giai đoạn 6.1 (Publisher Agent) |
+| `get_publish_status` | `task_id` | string | bắt buộc | `{task_id, status, result, error_message}` |
 
 ---
 
@@ -330,6 +330,37 @@ Adapter thật đã viết sẵn (`agents/muse/adapter.py`): `submit_video()`, `
 
 ---
 
+# 9.1. Tích hợp Publisher Agent — YouTube / TikTok / Instagram (FR-033–FR-036)
+
+Theo yêu cầu bổ sung của người dùng (ưu tiên tự động hóa tạo video + đăng bài hơn là code), hệ thống có thêm **Publisher Agent** (`agents/publisher/`): một `assigned_agent` duy nhất (`publisher`), định tuyến theo `payload.platform` thay vì tạo riêng một agent cho mỗi nền tảng — thêm nền tảng thứ 4 sau này chỉ cần 1 file adapter mới + 1 nhánh trong dispatcher, không đổi schema.
+
+**Cả 3 adapter đã viết đúng theo API thật (tra từ tài liệu chính thức của từng nền tảng), có test giả lập xác nhận đúng định dạng request/response — nhưng chưa gọi được API thật (không có app/tài khoản developer nào trong môi trường code).**
+
+## YouTube (`agents/publisher/youtube.py`)
+
+* API: YouTube Data API v3, `videos.insert` qua resumable upload REST (không dùng SDK, dễ test hơn).
+* OAuth scope: `https://www.googleapis.com/auth/youtube.upload`.
+* **Cần làm trên máy thật:** tạo Google Cloud project → bật "YouTube Data API v3" → tạo OAuth client "Desktop app" → chạy `python scripts/setup_youtube_oauth.py <client_secret.json>` (mở trình duyệt, đăng nhập, duyệt quyền) → tự ghi `config/youtube_token.json`.
+* Lưu ý thật: project Google Cloud **chưa được Google xác minh/audit** (mặc định) sẽ bị ép video ở chế độ private/unlisted, bất kể `privacy_status` yêu cầu gì.
+
+## TikTok (`agents/publisher/tiktok.py`)
+
+* API: Content Posting API v2 (`/v2/post/publish/video/init/` → PUT file → `/v2/post/publish/status/fetch/`).
+* **Cần làm trên máy thật:** đăng ký app tại developers.tiktok.com, xin scope `video.publish`, tự làm luồng OAuth của app đó để lấy access token (không có script dựng sẵn vì redirect URI gắn với app riêng của từng người dùng).
+* Lưu ý thật: app **chưa qua audit riêng của TikTok cho Content Posting API** (mặc định) chỉ đăng được ở chế độ `SELF_ONLY` (riêng tư), tối đa 5 tài khoản/24h — đây là giới hạn của TikTok, code không khắc phục được.
+
+## Instagram (`agents/publisher/instagram.py`)
+
+* API: Meta Graph API — tạo container `POST /{ig_user_id}/media` (`media_type=REELS` + `video_url`) → poll `status_code` → `POST /{ig_user_id}/media_publish`.
+* **Cần làm trên máy thật:** tạo app Meta for Developers, có Facebook Page liên kết tài khoản Instagram Business/Creator, lấy access token có quyền đăng nội dung.
+* **Khoảng trống thật chưa giải quyết:** API Instagram chỉ nhận `video_url` công khai, **không nhận file upload trực tiếp**. Video tải về từ Muse4AI là file local — cần tự lưu trữ nó ở đâu đó công khai (CDN, cloud storage riêng) trước khi gọi `publish_video` với `platform=instagram`. Dựng tunnel từ `output/videos/` của Orchestrator ra URL công khai (vd ngrok/cloudflared) là hướng mở rộng hợp lý, chưa làm trong bản này.
+
+## Dispatcher
+
+`backend/services/dispatcher.py` nhánh `publisher`: gọi đúng adapter theo `payload.platform`, poll tới trạng thái cuối cùng (TikTok/Instagram), ghi `result`/`error_message` thật — không bao giờ báo `COMPLETED` khi chưa xác nhận trạng thái cuối từ nền tảng.
+
+---
+
 # 10. GIAI ĐOẠN 7 — Tích hợp Claude Desktop (FR-011)
 
 1. Mở `%APPDATA%\Claude\claude_desktop_config.json`.
@@ -348,7 +379,7 @@ Adapter thật đã viết sẵn (`agents/muse/adapter.py`): `submit_video()`, `
 
 (đường dẫn thật thay theo nơi triển khai cuối cùng — xem Giai đoạn 10)
 
-3. Lưu file, khởi động lại Claude Desktop, xác nhận 11 tool xuất hiện trong danh sách MCP tools.
+3. Lưu file, khởi động lại Claude Desktop, xác nhận 13 tool xuất hiện trong danh sách MCP tools.
 4. Nếu file cấu hình chưa tồn tại — tạo mới, không giả định cấu trúc ngoài key `mcpServers`.
 
 ---

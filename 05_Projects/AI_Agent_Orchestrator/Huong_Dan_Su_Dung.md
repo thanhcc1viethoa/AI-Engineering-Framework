@@ -86,6 +86,42 @@ rồi dùng như mô tả ở mục 3/4 bên dưới (Dashboard hoặc Claude De
 
 ---
 
+## 0.2. Cài đặt & cấu hình Publisher Agent (đăng video lên YouTube/TikTok/Instagram)
+
+Đây là nhu cầu chính nếu bạn muốn tự động hóa "tạo video → đăng lên nền tảng". Mỗi nền tảng cần bạn tự đăng ký app developer riêng — không có cách nào làm thay bạn được, vì bước duyệt quyền (OAuth) bắt buộc phải có trình duyệt thật và tài khoản thật của bạn.
+
+### YouTube
+
+1. Vào https://console.cloud.google.com → tạo project mới (hoặc dùng project có sẵn) → bật API **"YouTube Data API v3"**.
+2. Vào **Credentials** → **Create credentials** → **OAuth client ID** → loại **Desktop app** → tải file JSON (đây là `client_secret.json`).
+3. Chạy (một lần duy nhất, máy phải có trình duyệt):
+   ```powershell
+   pip install google-auth-oauthlib
+   python scripts\setup_youtube_oauth.py path\to\client_secret.json
+   ```
+   Trình duyệt mở ra, đăng nhập Google, bấm đồng ý quyền "upload video". Script tự ghi `config\youtube_token.json`.
+4. Lưu ý thật: nếu project Google Cloud của bạn **chưa được Google xác minh** (mặc định với project mới), video upload lên sẽ **tự động ở chế độ riêng tư/không công khai** dù bạn chọn gì — đây là giới hạn của Google, không phải lỗi hệ thống.
+
+### TikTok
+
+1. Vào https://developers.tiktok.com → đăng ký tài khoản developer, tạo app, xin quyền (scope) `video.publish`.
+2. Tự làm luồng đăng nhập OAuth của app đó (theo hướng dẫn TikTok hiển thị khi tạo app) để lấy **access token**.
+3. Điền vào `config\.env`: `TIKTOK_ACCESS_TOKEN=...`.
+4. Lưu ý thật: nếu app của bạn **chưa qua audit riêng** của TikTok cho Content Posting API (hầu hết app mới đều chưa), video chỉ đăng được ở chế độ **riêng tư (SELF_ONLY)**, tối đa 5 tài khoản/24h — giới hạn của TikTok, không sửa được bằng code.
+
+### Instagram
+
+1. Vào https://developers.facebook.com → tạo app Meta → có sẵn (hoặc tạo mới) một **Facebook Page**, liên kết với tài khoản **Instagram Business/Creator**.
+2. Lấy **Access Token** có quyền đăng bài (content-publishing) và **Instagram Business Account ID**.
+3. Điền vào `config\.env`: `INSTAGRAM_ACCESS_TOKEN=...` và `INSTAGRAM_IG_USER_ID=...`.
+4. **Giới hạn thật quan trọng:** Instagram chỉ nhận một **URL công khai** của video (`video_url`), không nhận file tải lên trực tiếp. Video Muse4AI tạo ra là file nằm trên máy bạn — bạn cần tự đưa nó lên một nơi công khai (Google Drive share link dạng tải trực tiếp, dịch vụ lưu trữ riêng, v.v.) rồi mới đưa `video_url` đó cho `publish_video`. Đây là giới hạn thật của Instagram, hệ thống hiện chưa tự động hóa bước này.
+
+### Dùng thử
+
+Trong Claude Desktop, gõ ví dụ: *"Đăng video này lên YouTube, tiêu đề 'Cảnh biển hoàng hôn'"* — Claude sẽ gọi `publish_video(platform="youtube", ...)`. Theo dõi kết quả qua `get_publish_status` hoặc trực tiếp trên Dashboard (trang Quản lý nhiệm vụ, lọc agent `publisher`).
+
+---
+
 ## 1. Cài đặt lần đầu
 
 ```powershell
@@ -133,7 +169,7 @@ Mở trình duyệt vào `http://127.0.0.1:5173`, nhập mật khẩu bạn đ�
 | Trang | Dùng để |
 | ----- | ------- |
 | **Tổng quan** | Xem nhanh số agent, số task đang chạy/xong/lỗi, số video — cập nhật realtime |
-| **Giám sát Agent** | Xem 5 agent (Claude, Antigravity, Muse, Python, QA) đang rảnh hay bận, lỗi gần nhất |
+| **Giám sát Agent** | Xem 6 agent (Claude, Antigravity, Muse, Python, QA, Publisher) đang rảnh hay bận, lỗi gần nhất |
 | **Quản lý nhiệm vụ** | **Tự tạo task thủ công** (không cần qua Claude Desktop): chọn agent, nhập payload JSON, bấm "Tạo nhiệm vụ"; xem kết quả, dừng task đang chạy |
 | **Workflow** | Nhập `workflow_id` để xem sơ đồ các bước và trạng thái từng bước |
 | **Quản lý video** | Danh sách các task gửi cho Muse Agent |
@@ -176,9 +212,10 @@ Bạn **chat bình thường bằng tiếng Việt** với Claude Desktop, Claud
 * "Hệ thống đang có bao nhiêu task đang chạy?"
 * "Task `task-xxxx` xong chưa, kết quả ra sao?"
 * "Tạo một video về biển hoàng hôn." (Muse tự quyết định thời lượng/độ phân giải — không có tham số chỉnh những thứ này)
+* "Đăng video vừa tạo lên YouTube, tiêu đề 'Biển hoàng hôn'."
 * "Hủy task `task-xxxx` đi."
 
-Claude sẽ gọi đúng tool tương ứng (`submit_task`, `get_system_status`, `get_task_result`, `create_video`, `cancel_task`...) và trả lời bạn bằng ngôn ngữ tự nhiên dựa trên kết quả thật nhận về.
+Claude sẽ gọi đúng tool tương ứng (`submit_task`, `get_system_status`, `get_task_result`, `create_video`, `publish_video`, `cancel_task`...) và trả lời bạn bằng ngôn ngữ tự nhiên dựa trên kết quả thật nhận về.
 
 ---
 
@@ -211,3 +248,4 @@ Chưa có script tự động bật — theo đúng thiết kế, việc này c�
 * **Antigravity**: dùng **CLI** (`agy`), không phải app **Antigravity Desktop** (bản 2.0) — Desktop là GUI/điều khiển giọng nói cho người dùng trực tiếp, không có API cho chương trình khác gọi. Adapter đã sửa theo cú pháp headless thật của Google (`agy --print "..." --print-timeout ...`), nhưng vẫn **chưa chạy thử trên CLI thật** (môi trường code không có `agy`). Có rủi ro đã biết: một số báo cáo nói `agy --print` có thể treo hoặc không in gì khi output bị pipe (đúng cách adapter đang gọi) — nếu task Antigravity bị treo hoặc trả về rỗng dù code đã chạy, khả năng cao là lỗi này, không phải lỗi logic của adapter. Lần đầu dùng thật, chạy `agy --help` để đối chiếu, báo lỗi cho tôi để sửa.
 * **Muse4AI**: adapter (`agents/muse/adapter.py`) đã được viết đúng theo tài liệu API thật của [github.com/andrew-babo/muse4ai](https://github.com/andrew-babo/muse4ai) (không còn là đoán), có test giả lập xác nhận gửi/nhận đúng định dạng. Vẫn **chưa chạy được với app Muse4AI thật** (cần máy Windows có cài app + tài khoản Muse đăng nhập) — lần đầu dùng thật, báo lại lỗi (nếu có) để tôi đối chiếu với tài liệu và sửa.
 * **6 script PowerShell**: viết cẩn thận nhưng chưa chạy thử thật lần nào (môi trường code không có Windows).
+* **Publisher Agent (YouTube/TikTok/Instagram)**: cả 3 adapter viết đúng theo tài liệu API thật của từng nền tảng, có test giả lập xác nhận đúng định dạng request/response — nhưng **chưa gọi được API thật** (không có app/tài khoản developer nào trong môi trường code). Lần đầu dùng thật từng nền tảng, báo lỗi (nếu có) để tôi đối chiếu tài liệu và sửa. Ba giới hạn thật của chính các nền tảng (không phải lỗi code): YouTube ép video riêng tư/không công khai nếu project Google Cloud chưa được xác minh; TikTok ép chế độ riêng tư (SELF_ONLY) nếu app chưa qua audit; Instagram chỉ nhận `video_url` công khai, không nhận file tải lên trực tiếp.

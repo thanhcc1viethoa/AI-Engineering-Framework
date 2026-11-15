@@ -29,3 +29,4 @@ frontend/build/
 .env
 .env.*
 !.env.example
+config/youtube_token.json

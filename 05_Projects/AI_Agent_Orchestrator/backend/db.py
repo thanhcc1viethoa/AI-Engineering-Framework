@@ -54,6 +54,7 @@ DEFAULT_AGENTS = [
     ("agent-muse", "Muse Agent", "muse"),
     ("agent-python", "Python Agent", "python"),
     ("agent-qa", "QA Agent", "qa"),
+    ("agent-publisher", "Publisher Agent", "publisher"),
 ]
 
 

@@ -29,6 +29,7 @@ class AssignedAgent(str, Enum):
     MUSE = "muse"
     PYTHON = "python"
     QA = "qa"
+    PUBLISHER = "publisher"
 
 
 class AgentStatus(str, Enum):

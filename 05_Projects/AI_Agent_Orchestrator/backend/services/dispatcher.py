@@ -6,6 +6,7 @@ subpackage of it, so the project root is added to sys.path here to import it.
 
 import asyncio
 import sys
+import time
 from pathlib import Path
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -21,6 +22,18 @@ from agents.antigravity.adapter import AntigravityError, check_cli_available, ru
 from agents.muse.adapter import Muse4AIError, download_output, get_job, submit_video  # noqa: E402
 from agents.python.adapter import run_automation  # noqa: E402
 from agents.qa.adapter import check_task_output  # noqa: E402
+from agents.publisher.youtube import YouTubeError  # noqa: E402
+from agents.publisher.youtube import upload_video as youtube_upload_video  # noqa: E402
+from agents.publisher.tiktok import TikTokError  # noqa: E402
+from agents.publisher.tiktok import post_video as tiktok_post_video  # noqa: E402
+from agents.publisher.tiktok import get_publish_status as tiktok_get_publish_status  # noqa: E402
+from agents.publisher.instagram import InstagramError  # noqa: E402
+from agents.publisher.instagram import create_reel_container as instagram_create_reel_container  # noqa: E402
+from agents.publisher.instagram import get_container_status as instagram_get_container_status  # noqa: E402
+from agents.publisher.instagram import publish_container as instagram_publish_container  # noqa: E402
+
+_TIKTOK_POLL_SECONDS = 5
+_INSTAGRAM_POLL_SECONDS = 5
 
 logger = get_logger("dispatcher")
 
@@ -91,7 +104,91 @@ def _run_sync(task) -> dict:
             raise ValueError(verdict["reason"])
         return verdict
 
+    if task.assigned_agent == "publisher":
+        return _run_publisher_task(task)
+
     raise ValueError(f"Unknown assigned_agent '{task.assigned_agent}'")
+
+
+def _run_publisher_task(task) -> dict:
+    """Routes by payload.platform instead of a separate assigned_agent value
+    per platform — adding a 4th platform only needs a new adapter module and
+    one more branch here, per agents/publisher/README.md."""
+    platform = task.payload.get("platform")
+
+    if platform == "youtube":
+        video_path = task.payload.get("video_path")
+        if not video_path:
+            raise ValueError("payload.video_path is required for platform=youtube")
+        result = youtube_upload_video(
+            config.YOUTUBE_TOKEN_PATH,
+            video_path,
+            title=task.payload.get("title") or task.task_name,
+            description=task.payload.get("description") or task.payload.get("caption", ""),
+            privacy_status=task.payload.get("privacy_status", "private"),
+        )
+        return {"platform": "youtube", "output_path": video_path, **result}
+
+    if platform == "tiktok":
+        if not config.TIKTOK_ACCESS_TOKEN:
+            raise TikTokError(
+                "TikTok is not configured (TIKTOK_ACCESS_TOKEN) — see agents/publisher/README.md"
+            )
+        video_path = task.payload.get("video_path")
+        if not video_path:
+            raise ValueError("payload.video_path is required for platform=tiktok")
+
+        publish_id = tiktok_post_video(
+            config.TIKTOK_ACCESS_TOKEN,
+            video_path,
+            title=task.payload.get("title") or task.payload.get("caption") or task.task_name,
+            privacy_level=task.payload.get("privacy_level", "SELF_ONLY"),
+        )
+
+        terminal_statuses = {"PUBLISH_COMPLETE", "FAILED", "SEND_TO_USER_INBOX"}
+        status_data = {"status": "PROCESSING_UPLOAD"}
+        while status_data.get("status") not in terminal_statuses:
+            time.sleep(_TIKTOK_POLL_SECONDS)
+            status_data = tiktok_get_publish_status(config.TIKTOK_ACCESS_TOKEN, publish_id)
+
+        if status_data.get("status") == "FAILED":
+            raise TikTokError(status_data.get("fail_reason") or "TikTok publish failed")
+
+        return {"platform": "tiktok", "publish_id": publish_id, "status": status_data.get("status"), "output_path": video_path}
+
+    if platform == "instagram":
+        if not config.INSTAGRAM_ACCESS_TOKEN or not config.INSTAGRAM_IG_USER_ID:
+            raise InstagramError(
+                "Instagram is not configured (INSTAGRAM_ACCESS_TOKEN / INSTAGRAM_IG_USER_ID) — "
+                "see agents/publisher/README.md"
+            )
+        video_url = task.payload.get("video_url")
+        if not video_url:
+            raise ValueError(
+                "payload.video_url is required for platform=instagram and must already be a "
+                "public URL — Instagram's API does not accept a local file (see "
+                "agents/publisher/instagram.py)"
+            )
+
+        creation_id = instagram_create_reel_container(
+            config.INSTAGRAM_ACCESS_TOKEN,
+            config.INSTAGRAM_IG_USER_ID,
+            video_url,
+            caption=task.payload.get("caption", ""),
+        )
+
+        status_code = "IN_PROGRESS"
+        while status_code == "IN_PROGRESS":
+            time.sleep(_INSTAGRAM_POLL_SECONDS)
+            status_code = instagram_get_container_status(config.INSTAGRAM_ACCESS_TOKEN, creation_id)
+
+        if status_code != "FINISHED":
+            raise InstagramError(f"Instagram container ended with status {status_code}, not FINISHED")
+
+        media_id = instagram_publish_container(config.INSTAGRAM_ACCESS_TOKEN, config.INSTAGRAM_IG_USER_ID, creation_id)
+        return {"platform": "instagram", "media_id": media_id}
+
+    raise ValueError(f"Unknown or missing payload.platform for publisher task: {platform!r} (expected youtube|tiktok|instagram)")
 
 
 async def dispatch_task(task_id: str) -> None:
