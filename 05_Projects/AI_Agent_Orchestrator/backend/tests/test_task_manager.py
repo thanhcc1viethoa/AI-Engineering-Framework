@@ -6,7 +6,7 @@ def test_create_and_get_task():
     task = task_manager.create_task(
         TaskCreate(task_name="t1", assigned_agent=AssignedAgent.PYTHON, payload={})
     )
-    assert task.status == "QUEUED"
+    assert task.status == "ASSIGNED"
     fetched = task_manager.get_task(task.task_id)
     assert fetched is not None
     assert fetched.task_id == task.task_id

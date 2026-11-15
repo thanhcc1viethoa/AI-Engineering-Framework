@@ -77,7 +77,7 @@ Sau mỗi giai đoạn: chạy thử thật → ghi log kết quả → sửa l�
 | 1 | Khảo sát môi trường Windows |
 | 2 | Thiết lập thư mục, Python venv, Node.js project |
 | 3 | Backend + Database |
-| 4 | MCP Server (13 tools) |
+| 4 | MCP Server (14 tools) |
 | 5 | Tích hợp Antigravity CLI |
 | 6 | Tích hợp Muse4AI |
 | 7 | Tích hợp Claude Desktop |
@@ -185,7 +185,7 @@ CREATE TABLE tasks (
     description     TEXT,
     assigned_agent  TEXT NOT NULL,          -- antigravity | muse | python | qa
     priority        TEXT NOT NULL DEFAULT 'Medium',  -- Critical|High|Medium|Low|Optional
-    status          TEXT NOT NULL DEFAULT 'PENDING', -- PENDING|QUEUED|RUNNING|WAITING|COMPLETED|FAILED|CANCELLED
+    status          TEXT NOT NULL DEFAULT 'PENDING', -- PENDING|ASSIGNED|RUNNING|REVIEW|COMPLETED|FAILED|CANCELLED
     payload         TEXT,                   -- JSON: dữ liệu đầu vào riêng của task
     result          TEXT,                   -- JSON: kết quả
     error_message   TEXT,
@@ -247,7 +247,8 @@ backend/
 | POST | `/tasks` | Tạo task mới (submit_task) |
 | GET | `/tasks` | Danh sách task, filter theo `status`, `assigned_agent` |
 | GET | `/tasks/{task_id}` | Chi tiết + kết quả một task |
-| DELETE | `/tasks/{task_id}` | Hủy task (chỉ khi đang PENDING/QUEUED/RUNNING) |
+| DELETE | `/tasks/{task_id}` | Hủy task (chỉ khi đang PENDING/ASSIGNED/RUNNING) |
+| POST | `/tasks/{task_id}/review` | Duyệt/từ chối task Antigravity đang `REVIEW` — xem mục 8.1 |
 | GET | `/agents` | Danh sách agent |
 | GET | `/agents/{agent_id}` | Chi tiết một agent |
 | POST | `/workflows` | Tạo + thực thi workflow từ một `goal` |
@@ -259,7 +260,7 @@ Mỗi endpoint ghi log request/response (trừ giá trị secret) vào `logs/orc
 
 ---
 
-# 7. GIAI ĐOẠN 4 — MCP Server (13 tool: 11 tool gốc + 2 tool Publisher Agent)
+# 7. GIAI ĐOẠN 4 — MCP Server (14 tool: 11 tool gốc + 2 tool Publisher Agent + review_task)
 
 Mỗi tool bên dưới gọi thẳng endpoint tương ứng ở mục 6.3. Không tạo tool nào chưa có chức năng thật đứng sau nó (quy tắc trong master prompt gốc).
 
@@ -273,11 +274,12 @@ Mỗi tool bên dưới gọi thẳng endpoint tương ứng ở mục 6.3. Khô
 | `get_agent_status` | `agent_id` | string | bắt buộc | `{agent_id, name, type, status, current_task, last_active, error_log}` |
 | `list_agents` | — | — | — | mảng agent tóm tắt |
 | `execute_workflow` | `workflow_name`, `goal`, `steps` (optional — nếu bỏ trống, Workflow Manager tự phân rã `goal`) | string/string/array | `workflow_name`, `goal` bắt buộc | `{workflow_id, task_ids}` |
-| `create_video` | `prompt`, `repeat` (int 1-4, mặc định 1), `account` (string, mặc định "auto") | string/int/string | `prompt` bắt buộc | `{task_id, status: "QUEUED"}` (Muse tự quyết định thời lượng/độ phân giải — API thật không có tham số này, xem Giai đoạn 6) |
+| `create_video` | `prompt`, `repeat` (int 1-4, mặc định 1), `account` (string, mặc định "auto") | string/int/string | `prompt` bắt buộc | `{task_id, status: "ASSIGNED"}` (Muse tự quyết định thời lượng/độ phân giải — API thật không có tham số này, xem Giai đoạn 6) |
 | `get_video_status` | `task_id` | string | bắt buộc | `{task_id, status, job_id, output_path}` |
 | `get_system_status` | — | — | — | `{agents_total, agents_active, tasks_running, tasks_completed, tasks_failed, videos_created, uptime_seconds}` |
-| `publish_video` | `platform` (enum: youtube\|tiktok\|instagram), `caption`, `video_path` (youtube/tiktok), `video_url` (instagram — bắt buộc là URL công khai), `title`, `description`, `privacy_status` (youtube), `privacy_level` (tiktok, mặc định SELF_ONLY) | string/string/string/string/string/string/string/string | `platform`, `caption` bắt buộc | `{task_id, status: "QUEUED"}` — xem Giai đoạn 6.1 (Publisher Agent) |
+| `publish_video` | `platform` (enum: youtube\|tiktok\|instagram), `caption`, `video_path` (youtube/tiktok), `video_url` (instagram — bắt buộc là URL công khai), `title`, `description`, `privacy_status` (youtube), `privacy_level` (tiktok, mặc định SELF_ONLY) | string/string/string/string/string/string/string/string | `platform`, `caption` bắt buộc | `{task_id, status: "ASSIGNED"}` — xem Giai đoạn 6.1 (Publisher Agent) |
 | `get_publish_status` | `task_id` | string | bắt buộc | `{task_id, status, result, error_message}` |
+| `review_task` | `task_id`, `decision` (enum: approve\|reject), `feedback` (optional, dùng khi reject) | string/string/string | `task_id`, `decision` bắt buộc | `{task_id, status}` — chỉ áp dụng cho task `assigned_agent=antigravity` ở trạng thái REVIEW, xem mục 8.1 |
 
 ---
 
@@ -302,6 +304,19 @@ Quy trình `agents/antigravity/`:
 5. Ghi lại: lệnh đã chạy, thời điểm bắt đầu/kết thúc, stdout/stderr, exit code → vào `logs/` và cột `result`/`error_message` của task.
 6. Nếu `exit code != 0` → `status=FAILED`; cho phép chạy lại có kiểm soát tối đa `MAX_FIX_RETRIES` lần (mục 5), mỗi lần retry ghi log riêng.
 7. Không bao giờ truyền cờ bỏ qua toàn bộ xác nhận quyền của Antigravity.
+
+---
+
+# 8.1. Cổng REVIEW — task Antigravity không bao giờ tự "xong" (FR-037/FR-038)
+
+Theo đúng tài liệu "PHÂN HỆ ANTIGRAVITY AGENT" của người dùng: một task Antigravity chạy xong (exit code 0, có output) **không được tự động chuyển `COMPLETED`**. Thay vào đó:
+
+1. `_run_sync` trong `dispatcher.py` luôn trả về `{"needs_review": True, ...}` cho task Antigravity thành công — dùng chung cơ chế đã có cho Muse4AI's `needs_review`.
+2. Task chuyển sang trạng thái `REVIEW`, kèm theo `result` có: `files` (toàn bộ file trong `projects/<task_id>/` sau khi chạy — không phải git diff, vì thư mục không nhất thiết là git repo), và `test_result` nếu `payload.test_command` được cung cấp (chạy lệnh đó trong cùng thư mục, ghi lại `exit_code`/`passed`/`output`).
+3. Claude (qua MCP tool `review_task`) hoặc người dùng (qua nút "Duyệt"/"Từ chối" trên Dashboard, trang Quản lý nhiệm vụ) quyết định:
+   - **`approve`** → `status=COMPLETED`.
+   - **`reject` kèm `feedback`** → nối `feedback` vào `payload.instructions`, tăng bộ đếm `payload._review_attempts`, chuyển lại `status=ASSIGNED` và chạy lại — dùng **cùng** `task_id`/`projects/<task_id>/`, không tạo task mới. Vượt quá `MAX_FIX_RETRIES` lần reject → `status=FAILED`.
+4. Endpoint thật: `POST /tasks/{task_id}/review {"decision": "approve"|"reject", "feedback"?: string}` — chỉ áp dụng cho `assigned_agent=antigravity`; gọi cho task Muse4AI đang `REVIEW` (needs_review) sẽ bị từ chối với lỗi rõ ràng, vì đó cần người tự kiểm tra trong app Muse4AI, không có cách giải quyết qua API.
 
 ---
 
@@ -379,7 +394,7 @@ Theo yêu cầu bổ sung của người dùng (ưu tiên tự động hóa tạ
 
 (đường dẫn thật thay theo nơi triển khai cuối cùng — xem Giai đoạn 10)
 
-3. Lưu file, khởi động lại Claude Desktop, xác nhận 13 tool xuất hiện trong danh sách MCP tools.
+3. Lưu file, khởi động lại Claude Desktop, xác nhận 14 tool xuất hiện trong danh sách MCP tools.
 4. Nếu file cấu hình chưa tồn tại — tạo mới, không giả định cấu trúc ngoài key `mcpServers`.
 
 ---
@@ -410,7 +425,7 @@ Chạy từng mục, ghi kết quả thật (đạt/không đạt), không suy �
 | -- | -------------- |
 | AC-001 | Mở Claude Desktop, gọi `list_agents` qua MCP, nhận phản hồi thật |
 | AC-002 | Mở dashboard, đăng nhập, xem trang Overview tải được dữ liệu |
-| AC-003 | Gọi `submit_task` với `assigned_agent="antigravity"`, xác nhận task chuyển QUEUED→RUNNING |
+| AC-003 | Gọi `submit_task` với `assigned_agent="antigravity"`, xác nhận task chuyển ASSIGNED→RUNNING→REVIEW |
 | AC-004 | Task Antigravity thật hoàn tất với `status=COMPLETED` và `output_path` tồn tại |
 | AC-005 | `agents/muse` kết nối thành công tới tài khoản Muse4AI thật |
 | AC-006 | `create_video` sinh ra ít nhất một video thật trong `output/videos` |

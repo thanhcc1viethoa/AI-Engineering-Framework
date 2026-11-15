@@ -50,6 +50,8 @@ export const api = {
   submitTask: (data) => request("/tasks", { method: "POST", body: JSON.stringify(data) }),
   getTask: (id) => request(`/tasks/${id}`),
   cancelTask: (id) => request(`/tasks/${id}`, { method: "DELETE" }),
+  reviewTask: (id, decision, feedback) =>
+    request(`/tasks/${id}/review`, { method: "POST", body: JSON.stringify({ decision, feedback }) }),
   executeWorkflow: (data) => request("/workflows", { method: "POST", body: JSON.stringify(data) }),
   getWorkflow: (id) => request(`/workflows/${id}`),
 };

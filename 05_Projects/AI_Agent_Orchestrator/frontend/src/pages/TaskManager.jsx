@@ -2,9 +2,9 @@ import { Fragment, useEffect, useState } from "react";
 
 import { api } from "../api";
 
-const STATUSES = ["", "PENDING", "QUEUED", "RUNNING", "WAITING", "COMPLETED", "FAILED", "CANCELLED"];
-const AGENTS = ["antigravity", "muse", "python", "qa"];
-const CANCELLABLE = ["PENDING", "QUEUED", "RUNNING"];
+const STATUSES = ["", "PENDING", "ASSIGNED", "RUNNING", "REVIEW", "COMPLETED", "FAILED", "CANCELLED"];
+const AGENTS = ["antigravity", "muse", "python", "qa", "publisher"];
+const CANCELLABLE = ["PENDING", "ASSIGNED", "RUNNING"];
 
 export default function TaskManager() {
   const [tasks, setTasks] = useState([]);
@@ -59,6 +59,18 @@ export default function TaskManager() {
 
   async function handleCancel(taskId) {
     await api.cancelTask(taskId);
+    load();
+  }
+
+  async function handleApprove(taskId) {
+    await api.reviewTask(taskId, "approve");
+    load();
+  }
+
+  async function handleReject(taskId) {
+    const feedback = window.prompt("Phản hồi cho Antigravity (lý do từ chối, cần sửa gì):", "");
+    if (feedback === null) return; // user cancelled the prompt
+    await api.reviewTask(taskId, "reject", feedback);
     load();
   }
 
@@ -143,6 +155,12 @@ export default function TaskManager() {
                   </button>
                   {CANCELLABLE.includes(task.status) && (
                     <button onClick={() => handleCancel(task.task_id)}>Dừng</button>
+                  )}
+                  {task.status === "REVIEW" && task.assigned_agent === "antigravity" && (
+                    <>
+                      <button onClick={() => handleApprove(task.task_id)}>Duyệt</button>
+                      <button onClick={() => handleReject(task.task_id)}>Từ chối</button>
+                    </>
                   )}
                 </td>
               </tr>

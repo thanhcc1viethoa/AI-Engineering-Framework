@@ -1,4 +1,5 @@
 import asyncio
+from unittest.mock import MagicMock
 
 from models import AssignedAgent, TaskCreate
 from services import dispatcher, task_manager
@@ -36,6 +37,41 @@ async def test_antigravity_task_fails_cleanly_without_hanging():
     result = task_manager.get_task(task.task_id)
     assert result.status == "FAILED"
     assert "AS-001" in result.error_message
+
+
+async def test_antigravity_success_goes_to_review_not_completed(monkeypatch):
+    """Antigravity Agent subsystem rule: a coding task is never
+    auto-COMPLETED — it lands in REVIEW with files/test_result for Claude to
+    inspect via review_task."""
+    monkeypatch.setattr(dispatcher, "check_cli_available", MagicMock(return_value=True))
+    monkeypatch.setattr(
+        dispatcher,
+        "run_coding_task",
+        MagicMock(
+            return_value={
+                "stdout": "done",
+                "duration_seconds": 1.2,
+                "output_path": "/tmp/fake-project",
+                "files": ["hello.py"],
+                "test_command": "pytest",
+                "test_result": {"exit_code": 0, "passed": True, "output": "1 passed"},
+            }
+        ),
+    )
+
+    task = task_manager.create_task(
+        TaskCreate(
+            task_name="code",
+            assigned_agent=AssignedAgent.ANTIGRAVITY,
+            payload={"instructions": "write hello.py", "test_command": "pytest"},
+        )
+    )
+    await asyncio.wait_for(dispatcher.dispatch_task(task.task_id), timeout=10)
+
+    result = task_manager.get_task(task.task_id)
+    assert result.status == "REVIEW"
+    assert result.result["files"] == ["hello.py"]
+    assert result.result["test_result"]["passed"] is True
 
 
 async def test_muse_task_fails_cleanly_when_unconfigured():

@@ -47,7 +47,7 @@ async def test_muse_task_needs_review_is_waiting_not_failed(monkeypatch):
     await dispatcher.dispatch_task(task.task_id)
 
     result = task_manager.get_task(task.task_id)
-    assert result.status == "WAITING"
+    assert result.status == "REVIEW"
     assert result.result["needs_review"] is True
 
 

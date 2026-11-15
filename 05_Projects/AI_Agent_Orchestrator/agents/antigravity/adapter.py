@@ -30,9 +30,11 @@ Known open risks from that same research, not yet confirmed fixed or current:
   `ANTIGRAVITY_TOKEN`) was not confirmed from an authoritative source.
 """
 
+import shlex
 import subprocess
 import time
 from pathlib import Path
+from typing import Optional
 
 
 class AntigravityError(Exception):
@@ -47,12 +49,30 @@ def check_cli_available(cli_path: str) -> bool:
         return False
 
 
-def run_coding_task(cli_path: str, project_dir: Path, instructions: str, timeout_seconds: int) -> dict:
+def run_coding_task(
+    cli_path: str,
+    project_dir: Path,
+    instructions: str,
+    timeout_seconds: int,
+    test_command: Optional[str] = None,
+) -> dict:
     """Invoke the Antigravity CLI's headless mode, scoped to project_dir only.
 
     If this hangs or returns empty stdout on the real machine, see the
     non-TTY caveat in this module's docstring before assuming it is a bug in
-    this adapter."""
+    this adapter.
+
+    `test_command` (optional, e.g. "pytest" or "npm test"): run in
+    project_dir after the coding step succeeds, per the Antigravity Agent
+    subsystem spec's requirement that a task record real test results, not
+    just Antigravity's own claim of success. If omitted, `test_result` is
+    None — nothing about test coverage is assumed or fabricated.
+
+    `files` in the return value is every file present under project_dir
+    after the run (not a git-style diff — project_dir has no git repo by
+    default), so it also includes files from an earlier attempt in the same
+    project_dir (exception retries and review-rejection retries reuse it).
+    """
     project_dir.mkdir(parents=True, exist_ok=True)
     command = [cli_path, "--print", instructions, "--print-timeout", f"{timeout_seconds}s"]
 
@@ -82,8 +102,37 @@ def run_coding_task(cli_path: str, project_dir: Path, instructions: str, timeout
             "check the project directory for actual changes before treating this as failed."
         )
 
+    files = sorted(str(p.relative_to(project_dir)) for p in project_dir.rglob("*") if p.is_file())
+
+    test_result = _run_test_command(test_command, project_dir, timeout_seconds) if test_command else None
+
     return {
         "stdout": result.stdout[-5000:],
         "duration_seconds": duration,
         "output_path": str(project_dir),
+        "files": files,
+        "test_command": test_command,
+        "test_result": test_result,
     }
+
+
+def _run_test_command(test_command: str, project_dir: Path, timeout_seconds: int) -> dict:
+    """Runs a simple space-separated command (shlex/POSIX splitting — complex
+    Windows-specific quoting in test_command is not handled)."""
+    try:
+        result = subprocess.run(
+            shlex.split(test_command),
+            cwd=str(project_dir),
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
+        return {
+            "exit_code": result.returncode,
+            "passed": result.returncode == 0,
+            "output": (result.stdout + result.stderr)[-3000:],
+        }
+    except FileNotFoundError as exc:
+        return {"exit_code": None, "passed": False, "output": f"Test command not found: {exc}"}
+    except subprocess.TimeoutExpired:
+        return {"exit_code": None, "passed": False, "output": f"Test command timed out after {timeout_seconds}s"}

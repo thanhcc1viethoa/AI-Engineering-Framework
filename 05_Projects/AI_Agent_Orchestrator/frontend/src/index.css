@@ -188,7 +188,7 @@ th {
   text-transform: uppercase;
 }
 
-.status-pending, .status-queued, .status-waiting { background: rgba(245, 185, 66, 0.2); color: var(--warn); }
+.status-pending, .status-assigned, .status-review { background: rgba(245, 185, 66, 0.2); color: var(--warn); }
 .status-running { background: rgba(79, 125, 251, 0.2); color: var(--accent); }
 .status-completed { background: rgba(61, 220, 132, 0.2); color: var(--ok); }
 .status-failed { background: rgba(240, 79, 79, 0.2); color: var(--err); }

@@ -43,7 +43,7 @@ def create_task(data: TaskCreate) -> Task:
             INSERT INTO tasks
                 (task_id, task_name, description, assigned_agent, priority,
                  status, payload, workflow_id, created_at)
-            VALUES (?, ?, ?, ?, ?, 'QUEUED', ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, 'ASSIGNED', ?, ?, ?)
             """,
             (
                 task_id,
@@ -129,10 +129,23 @@ def update_task_status(
     return get_task(task_id)
 
 
+def update_task_payload(task_id: str, payload: dict) -> Optional[Task]:
+    """Used by the REVIEW-rejection retry flow (routers/tasks.py) to append
+    Claude's feedback into payload.instructions before re-dispatching the
+    same task_id/project_dir."""
+    conn = get_connection()
+    try:
+        conn.execute("UPDATE tasks SET payload = ? WHERE task_id = ?", (json.dumps(payload), task_id))
+        conn.commit()
+    finally:
+        conn.close()
+    return get_task(task_id)
+
+
 def cancel_task(task_id: str) -> Optional[Task]:
     task = get_task(task_id)
     if task is None:
         return None
-    if task.status not in (TaskStatus.PENDING.value, TaskStatus.QUEUED.value, TaskStatus.RUNNING.value):
+    if task.status not in (TaskStatus.PENDING.value, TaskStatus.ASSIGNED.value, TaskStatus.RUNNING.value):
         return task
     return update_task_status(task_id, TaskStatus.CANCELLED)

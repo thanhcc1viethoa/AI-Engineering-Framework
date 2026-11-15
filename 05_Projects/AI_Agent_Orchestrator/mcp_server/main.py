@@ -1,10 +1,11 @@
 """MCP Server — Requirement.md FR-006/FR-011.
 
-Exposes exactly the 13 tools defined in Antigravity_Build_Guide.md section 7
-(the original 11 plus publish_video/get_publish_status for the Publisher
-Agent) to Claude Desktop. Every tool is a thin, honest wrapper over the Orchestrator
-REST API (backend/) — it calls a real endpoint and returns its real response,
-never a fabricated result.
+Exposes exactly the 14 tools defined in Antigravity_Build_Guide.md section 7
+(the original 11, publish_video/get_publish_status for the Publisher Agent,
+and review_task for the Antigravity Agent subsystem's REVIEW gate) to Claude
+Desktop. Every tool is a thin, honest wrapper over the Orchestrator REST API
+(backend/) — it calls a real endpoint and returns its real response, never a
+fabricated result.
 
 Run with: python main.py   (stdio transport, matches the claude_desktop_config.json
 entry documented in Antigravity_Build_Guide.md section 10.)
@@ -81,10 +82,10 @@ def _call(method: str, path: str, **kwargs) -> dict:
         }
 
 
-@mcp.tool(description="Submit a new task for a specific agent (antigravity, muse, python, or qa) to execute.")
+@mcp.tool(description="Submit a new task for a specific agent (antigravity, muse, python, qa, or publisher) to execute.")
 def submit_task(
     task_name: str,
-    assigned_agent: Literal["antigravity", "muse", "python", "qa"],
+    assigned_agent: Literal["antigravity", "muse", "python", "qa", "publisher"],
     description: Optional[str] = None,
     priority: Literal["Critical", "High", "Medium", "Low", "Optional"] = "Medium",
     payload: Optional[dict] = None,
@@ -102,7 +103,7 @@ def submit_task(
     )
 
 
-@mcp.tool(description="Get a task's current lifecycle status (PENDING/QUEUED/RUNNING/WAITING/COMPLETED/FAILED/CANCELLED) and timestamps.")
+@mcp.tool(description="Get a task's current lifecycle status (PENDING/ASSIGNED/RUNNING/REVIEW/COMPLETED/FAILED/CANCELLED) and timestamps.")
 def get_task_status(task_id: str) -> dict:
     task = _call("GET", f"/tasks/{task_id}")
     if "error" in task:
@@ -115,7 +116,13 @@ def get_task_status(task_id: str) -> dict:
     }
 
 
-@mcp.tool(description="Get a task's full result, output path, and error message (if any). Only trust a COMPLETED status as truly done.")
+@mcp.tool(
+    description=(
+        "Get a task's full result, output path, and error message (if any). Only trust a "
+        "COMPLETED status as truly done — a REVIEW status means the task finished running but "
+        "is awaiting a decision via review_task (Antigravity) or a manual check (Muse4AI)."
+    )
+)
 def get_task_result(task_id: str) -> dict:
     task = _call("GET", f"/tasks/{task_id}")
     if "error" in task:
@@ -132,9 +139,9 @@ def get_task_result(task_id: str) -> dict:
 @mcp.tool(description="List tasks, optionally filtered by status and/or assigned agent.")
 def list_tasks(
     status: Optional[
-        Literal["PENDING", "QUEUED", "RUNNING", "WAITING", "COMPLETED", "FAILED", "CANCELLED"]
+        Literal["PENDING", "ASSIGNED", "RUNNING", "REVIEW", "COMPLETED", "FAILED", "CANCELLED"]
     ] = None,
-    assigned_agent: Optional[Literal["antigravity", "muse", "python", "qa"]] = None,
+    assigned_agent: Optional[Literal["antigravity", "muse", "python", "qa", "publisher"]] = None,
     limit: int = 50,
 ) -> dict:
     params = {"limit": limit}
@@ -146,9 +153,28 @@ def list_tasks(
     return {"tasks": result} if isinstance(result, list) else result
 
 
-@mcp.tool(description="Cancel a task that is PENDING, QUEUED, or RUNNING. No-op if it already finished.")
+@mcp.tool(description="Cancel a task that is PENDING, ASSIGNED, or RUNNING. No-op if it already finished.")
 def cancel_task(task_id: str) -> dict:
     return _call("DELETE", f"/tasks/{task_id}")
+
+
+@mcp.tool(
+    description=(
+        "Review a completed Antigravity coding task (status REVIEW) — the Antigravity Agent "
+        "subsystem never auto-completes a coding task; Claude must inspect the result "
+        "(get_task_result: stdout, files changed, test_result if a test_command was given) and "
+        "decide. 'approve' marks it COMPLETED. 'reject' with `feedback` re-dispatches the same "
+        "task with that feedback appended to its instructions, up to MAX_FIX_RETRIES times "
+        "before it is marked FAILED. Only valid for assigned_agent=antigravity; a Muse4AI "
+        "REVIEW (needs_review) has no programmatic resolution — the user checks it in the "
+        "Muse4AI app."
+    )
+)
+def review_task(task_id: str, decision: Literal["approve", "reject"], feedback: Optional[str] = None) -> dict:
+    payload = {"decision": decision}
+    if feedback is not None:
+        payload["feedback"] = feedback
+    return _call("POST", f"/tasks/{task_id}/review", json=payload)
 
 
 @mcp.tool(description="Get one agent's status, current task, capabilities, and last recorded error.")
@@ -201,7 +227,7 @@ def create_video(prompt: str, repeat: int = 1, account: str = "auto") -> dict:
 @mcp.tool(
     description=(
         "Check a video-generation task's status (this is the same task_id create_video "
-        "returned). A WAITING status means Muse4AI flagged the job for manual review — do "
+        "returned). A REVIEW status means Muse4AI flagged the job for manual review — do "
         "not resubmit; the user must check it inside the Muse4AI app."
     )
 )

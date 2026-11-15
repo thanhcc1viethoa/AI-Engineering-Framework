@@ -170,7 +170,7 @@ Mở trình duyệt vào `http://127.0.0.1:5173`, nhập mật khẩu bạn đ�
 | ----- | ------- |
 | **Tổng quan** | Xem nhanh số agent, số task đang chạy/xong/lỗi, số video — cập nhật realtime |
 | **Giám sát Agent** | Xem 6 agent (Claude, Antigravity, Muse, Python, QA, Publisher) đang rảnh hay bận, lỗi gần nhất |
-| **Quản lý nhiệm vụ** | **Tự tạo task thủ công** (không cần qua Claude Desktop): chọn agent, nhập payload JSON, bấm "Tạo nhiệm vụ"; xem kết quả, dừng task đang chạy |
+| **Quản lý nhiệm vụ** | **Tự tạo task thủ công** (không cần qua Claude Desktop): chọn agent, nhập payload JSON, bấm "Tạo nhiệm vụ"; xem kết quả, dừng task đang chạy; với task Antigravity ở trạng thái `REVIEW` có thêm nút **Duyệt**/**Từ chối** (từ chối sẽ hỏi phản hồi rồi giao lại cho Antigravity sửa) |
 | **Workflow** | Nhập `workflow_id` để xem sơ đồ các bước và trạng thái từng bước |
 | **Quản lý video** | Danh sách các task gửi cho Muse Agent |
 | **Log hệ thống** | Xem log backend trực tiếp, để debug khi có lỗi |
@@ -181,7 +181,9 @@ Mở trình duyệt vào `http://127.0.0.1:5173`, nhập mật khẩu bạn đ�
 - Agent: `python`
 - Payload: `{"action": "list_directory", "path": "C:\\Users"}`
 
-Task sẽ chuyển từ QUEUED → RUNNING → COMPLETED trong vài giây, bấm "Xem kết quả" để thấy danh sách file thật.
+Task sẽ chuyển từ ASSIGNED → RUNNING → COMPLETED trong vài giây, bấm "Xem kết quả" để thấy danh sách file thật.
+
+**Lưu ý riêng cho task Antigravity:** theo đúng quy trình "Antigravity Agent subsystem", một task Antigravity chạy xong sẽ dừng ở trạng thái **REVIEW** (không tự chuyển COMPLETED) — bạn hoặc Claude phải chủ động duyệt. Trên Dashboard, bấm **Duyệt** để hoàn tất, hoặc **Từ chối** kèm phản hồi để Antigravity sửa lại (tối đa `MAX_FIX_RETRIES` lần trước khi task bị đánh dấu FAILED).
 
 ---
 
@@ -211,11 +213,13 @@ Bạn **chat bình thường bằng tiếng Việt** với Claude Desktop, Claud
 * "Giao cho Antigravity viết một hàm Python tính giai thừa, lưu vào dự án demo."
 * "Hệ thống đang có bao nhiêu task đang chạy?"
 * "Task `task-xxxx` xong chưa, kết quả ra sao?"
+* "Task `task-xxxx` làm xong rồi, code ổn thì duyệt cho tôi." (task Antigravity sẽ dừng ở REVIEW chờ lệnh này)
+* "Chưa ổn, bảo Antigravity sửa lại: thiếu xử lý lỗi khi file không tồn tại."
 * "Tạo một video về biển hoàng hôn." (Muse tự quyết định thời lượng/độ phân giải — không có tham số chỉnh những thứ này)
 * "Đăng video vừa tạo lên YouTube, tiêu đề 'Biển hoàng hôn'."
 * "Hủy task `task-xxxx` đi."
 
-Claude sẽ gọi đúng tool tương ứng (`submit_task`, `get_system_status`, `get_task_result`, `create_video`, `publish_video`, `cancel_task`...) và trả lời bạn bằng ngôn ngữ tự nhiên dựa trên kết quả thật nhận về.
+Claude sẽ gọi đúng tool tương ứng (`submit_task`, `get_system_status`, `get_task_result`, `create_video`, `publish_video`, `review_task`, `cancel_task`...) và trả lời bạn bằng ngôn ngữ tự nhiên dựa trên kết quả thật nhận về.
 
 ---
 
@@ -246,6 +250,7 @@ Chưa có script tự động bật — theo đúng thiết kế, việc này c�
 ## Giới hạn hiện tại cần biết
 
 * **Antigravity**: dùng **CLI** (`agy`), không phải app **Antigravity Desktop** (bản 2.0) — Desktop là GUI/điều khiển giọng nói cho người dùng trực tiếp, không có API cho chương trình khác gọi. Adapter đã sửa theo cú pháp headless thật của Google (`agy --print "..." --print-timeout ...`), nhưng vẫn **chưa chạy thử trên CLI thật** (môi trường code không có `agy`). Có rủi ro đã biết: một số báo cáo nói `agy --print` có thể treo hoặc không in gì khi output bị pipe (đúng cách adapter đang gọi) — nếu task Antigravity bị treo hoặc trả về rỗng dù code đã chạy, khả năng cao là lỗi này, không phải lỗi logic của adapter. Lần đầu dùng thật, chạy `agy --help` để đối chiếu, báo lỗi cho tôi để sửa.
+* **Cổng REVIEW cho Antigravity**: một task Antigravity chạy xong sẽ luôn dừng ở `REVIEW`, không tự `COMPLETED` — đúng theo yêu cầu bổ sung "Antigravity Agent subsystem" của bạn. Việc chạy kiểm thử (`test_command` trong payload) là tùy chọn: nếu bạn không truyền, hệ thống không tự bịa ra kết quả kiểm thử nào cả, chỉ trình bày trung thực stdout + danh sách file.
 * **Muse4AI**: adapter (`agents/muse/adapter.py`) đã được viết đúng theo tài liệu API thật của [github.com/andrew-babo/muse4ai](https://github.com/andrew-babo/muse4ai) (không còn là đoán), có test giả lập xác nhận gửi/nhận đúng định dạng. Vẫn **chưa chạy được với app Muse4AI thật** (cần máy Windows có cài app + tài khoản Muse đăng nhập) — lần đầu dùng thật, báo lại lỗi (nếu có) để tôi đối chiếu với tài liệu và sửa.
 * **6 script PowerShell**: viết cẩn thận nhưng chưa chạy thử thật lần nào (môi trường code không có Windows).
 * **Publisher Agent (YouTube/TikTok/Instagram)**: cả 3 adapter viết đúng theo tài liệu API thật của từng nền tảng, có test giả lập xác nhận đúng định dạng request/response — nhưng **chưa gọi được API thật** (không có app/tài khoản developer nào trong môi trường code). Lần đầu dùng thật từng nền tảng, báo lỗi (nếu có) để tôi đối chiếu tài liệu và sửa. Ba giới hạn thật của chính các nền tảng (không phải lỗi code): YouTube ép video riêng tư/không công khai nếu project Google Cloud chưa được xác minh; TikTok ép chế độ riêng tư (SELF_ONLY) nếu app chưa qua audit; Instagram chỉ nhận `video_url` công khai, không nhận file tải lên trực tiếp.

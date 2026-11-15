@@ -12,7 +12,7 @@
 | -------------- | -------------------------------------- |
 | Project Name   | AI_Agent_Orchestrator                  |
 | Requirement ID | REQ-001                                |
-| Version        | 0.1.3                                  |
+| Version        | 0.1.4                                  |
 | Status         | Draft                                  |
 | Author         |                                        |
 | Owner          |                                        |
@@ -129,11 +129,11 @@ No Compliance Requirements were specified in the source request.
 | ------ | ----------- | -------- | -------- | ----- | ------ | ------ |
 | FR-001 | Survey the target Windows machine (OS version, CPU, RAM, disk incl. target drive free space, Python/pip, Node.js/npm, Antigravity IDE, Antigravity CLI, Claude Desktop, Muse4AI, existing MCP Server configs, potentially conflicting running processes) via PowerShell before any installation, and produce a written environment report. | Technical | Critical | | User Request | Draft |
 | FR-002 | Create the install directory structure (backend, frontend, mcp_server, agents/{antigravity,muse,python,qa}, workflows, projects, output/{videos,code,reports}, database, logs, config, scripts, backup) under the install root. | Technical | Critical | | User Request | Draft |
-| FR-003 | Implement a Task Manager module persisting tasks with fields Task ID, Task Name, Description, Assigned Agent, Priority, Status, Created At, Started At, Completed At, Result, Error Message, Output Path, and status values PENDING, QUEUED, RUNNING, WAITING, COMPLETED, FAILED, CANCELLED. | Functional | Critical | | User Request | Draft |
+| FR-003 | Implement a Task Manager module persisting tasks with fields Task ID, Task Name, Description, Assigned Agent, Priority, Status, Created At, Started At, Completed At, Result, Error Message, Output Path, and status values PENDING, ASSIGNED, RUNNING, REVIEW, COMPLETED, FAILED, CANCELLED (renamed from the original QUEUED/WAITING — see FR-037 and Notes). | Functional | Critical | | User Request | Draft |
 | FR-004 | Implement an Agent Manager module registering Claude Manager, Antigravity Agent, Muse Agent, Python Agent, QA Agent, and Publisher Agent, each with ID, Name, Type, Status, Capabilities, Current Task, Last Active, Error Log. | Functional | Critical | | User Request | Draft |
 | FR-005 | Implement a Workflow Manager that decomposes one incoming request into an ordered set of tasks, assigns each task to the appropriate agent, and supports sequential execution plus parallel execution for independent tasks. | Functional | Critical | | User Request | Draft |
-| FR-006 | Implement an MCP Server exposing exactly these tools to Claude Desktop, each with a documented description, parameters, types, and return schema, implementing only functionality that is actually built: `submit_task`, `get_task_status`, `get_task_result`, `list_tasks`, `cancel_task`, `get_agent_status`, `list_agents`, `execute_workflow`, `create_video`, `get_video_status`, `get_system_status`, `publish_video`, `get_publish_status`. | Technical | Critical | | User Request | Draft |
-| FR-007 | Integrate the Antigravity CLI as the coding/execution agent: verify installation and login, verify current CLI syntax/parameters, use its non-interactive mode if supported, dispatch tasks from Python, receive structured results, log execution, track duration, handle timeouts and errors, and allow a controlled re-run of a failed task. Each task is scoped to an authorized project directory; Antigravity's full permission-bypass mode shall not be used. | Technical | High | | User Request | Draft |
+| FR-006 | Implement an MCP Server exposing exactly these tools to Claude Desktop, each with a documented description, parameters, types, and return schema, implementing only functionality that is actually built: `submit_task`, `get_task_status`, `get_task_result`, `list_tasks`, `cancel_task`, `review_task`, `get_agent_status`, `list_agents`, `execute_workflow`, `create_video`, `get_video_status`, `get_system_status`, `publish_video`, `get_publish_status`. | Technical | Critical | | User Request | Draft |
+| FR-007 | Integrate the Antigravity CLI as the coding/execution agent: verify installation and login, verify current CLI syntax/parameters, use its non-interactive mode if supported, dispatch tasks from Python, receive structured results (including every file present in the task's project directory and, when a `test_command` is given, its exit code and output), log execution, track duration, handle timeouts and errors, and allow a controlled re-run of a failed task. Each task is scoped to an authorized project directory; Antigravity's full permission-bypass mode shall not be used. A successfully executed task is never auto-completed — see FR-037. | Technical | High | | User Request | Draft |
 | FR-008 | Integrate Muse4AI (github.com/andrew-babo/muse4ai — a local, unofficial Windows app that automates the user's own signed-in Meta Muse session; not a Meta cloud API) as the video agent via its documented local REST API (`http://127.0.0.1:47821/v1`): verify connection (`GET /v1/status`), submit a video-generation request (`POST /v1/jobs`), receive a job id, poll status, download the completed output when `succeeded`, and log errors and duration. Duplicate concurrent video-generation submissions for the same request shall be prevented. A `needs_review` job status shall be surfaced for human review, never auto-retried. | Technical | High | | User Request | Draft |
 | FR-009 | Implement a Python Automation Agent that executes automation tasks dispatched by the Orchestrator and returns a structured result. | Functional | Medium | | User Request | Draft |
 | FR-010 | Implement a QA Agent that inspects the output of a completed task or workflow step and returns a pass/fail quality verdict before Claude finalizes its report. | Functional | High | | User Request | Draft |
@@ -163,6 +163,8 @@ No Compliance Requirements were specified in the source request.
 | FR-034 | Integrate YouTube via the real YouTube Data API v3 (`videos.insert`, resumable upload, OAuth scope `youtube.upload`). An unaudited/unverified Google Cloud API project is restricted by YouTube itself to private/unlisted uploads regardless of the requested `privacy_status`. | Technical | High | | User Request (follow-up) | Draft |
 | FR-035 | Integrate TikTok via the real Content Posting API (`/v2/post/publish/video/init/`, chunked/FILE_UPLOAD, `/v2/post/publish/status/fetch/`). An unaudited TikTok API client is restricted by TikTok itself to `SELF_ONLY` (private) visibility and a 5-accounts-per-24h cap regardless of the requested `privacy_level`, until the app passes TikTok's separate Content Posting API audit. | Technical | High | | User Request (follow-up) | Draft |
 | FR-036 | Integrate Instagram via the real Meta Graph API (`POST /{ig_user_id}/media` with `media_type=REELS` + `video_url`, poll `status_code`, then `POST /{ig_user_id}/media_publish`). The API only accepts an already-public `video_url`, not a local file — this Orchestrator does not host the file for the caller; the caller must supply a reachable URL. | Technical | Medium | | User Request (follow-up) | Draft |
+| FR-037 | A successfully executed Antigravity coding task shall never be marked COMPLETED automatically. It is recorded as REVIEW (with its files and, if `test_command` was given, test result) until Claude approves it (`review_task`, decision `approve` → COMPLETED) or rejects it with feedback (decision `reject` → the same task is re-dispatched with that feedback appended to its instructions, up to `MAX_FIX_RETRIES` rejections before it is marked FAILED). Muse4AI's own `needs_review` REVIEW state is unaffected — it has no programmatic resolution; the user checks it in the Muse4AI app. | Functional | High | | User Request (follow-up — "Antigravity Agent subsystem" spec) | Draft |
+| FR-038 | A dashboard operator may approve or reject a REVIEW-status Antigravity task directly (Task Manager page), equivalent to calling `review_task`. | Functional | Medium | | User Request (follow-up) | Draft |
 
 Rules:
 
@@ -224,7 +226,7 @@ Rules:
 | ID     | Validation Method | Verified |
 | ------ | ------------------ | -------- |
 | FR-001 | Inspection of the environment report produced from the survey script output | No |
-| FR-006 | Test — call each of the 13 MCP tools from Claude Desktop and confirm documented behavior | No |
+| FR-006 | Test — call each of the 14 MCP tools from Claude Desktop and confirm documented behavior | No |
 | FR-007 | Demonstration — dispatch one real coding task to Antigravity and confirm a structured result is returned | No |
 | FR-008 | Demonstration — generate one real test video via Muse4AI and confirm the job completes | No |
 | FR-020 | Demonstration — submit one multi-step request end-to-end and confirm Claude's final report matches verified task results | No |
@@ -320,6 +322,8 @@ Rules:
 | AC-013 | Claude can publish a real video to YouTube via `publish_video` and get back a real video id/URL. | Demonstration |
 | AC-014 | Claude can publish a real video to TikTok via `publish_video`; if the app is unaudited, the result is a real private (SELF_ONLY) post, not a fabricated success. | Demonstration |
 | AC-015 | Claude can publish to Instagram via `publish_video` given an already-public `video_url`. | Demonstration |
+| AC-016 | A real, successfully executed Antigravity coding task lands in REVIEW, not COMPLETED, with its file list; approving it via `review_task` makes it COMPLETED. | Demonstration |
+| AC-017 | Rejecting a REVIEW task via `review_task` with feedback causes a real re-run whose instructions include that feedback. | Demonstration |
 
 ---
 
@@ -356,7 +360,7 @@ No success metrics beyond the Acceptance Criteria above were specified in the so
 
 | Requirement ID | Parent Requirement | Architecture | ADR | Review | Test | Issue | Commit |
 | -------------- | ------------------- | ------------- | --- | ------ | ---- | ----- | ------ |
-| FR-001 to FR-036 | — | | | | | | |
+| FR-001 to FR-038 | — | | | | | | |
 
 ---
 
@@ -368,6 +372,7 @@ No success metrics beyond the Acceptance Criteria above were specified in the so
 | 0.1.1 | 2026-11-15 | | Corrected FR-008/AS-002/Dependencies: Muse4AI identified as github.com/andrew-babo/muse4ai (local app, not a cloud API); renamed FR-022's `backup.ps1` to `backup_config.ps1` (Naming_Policy.md reserved name) |
 | 0.1.2 | 2026-11-15 | | Updated AS-001/Dependencies: identified Antigravity's real headless CLI flag (`--print`/`--print-timeout`, from Google's own docs) and clarified that Antigravity Desktop (2.0) is a separate, non-scriptable GUI app — FR-007 integrates the CLI only |
 | 0.1.3 | 2026-11-15 | | Added FR-033–FR-036 (Publisher Agent: YouTube/TikTok/Instagram), AS-005–AS-007, AC-013–AC-015; updated FR-004/FR-006/Purpose/Scope; follow-up request reprioritized video+publishing over coding |
+| 0.1.4 | 2026-11-15 | | Renamed task statuses QUEUED→ASSIGNED, WAITING→REVIEW per the "Antigravity Agent subsystem" follow-up spec; added FR-037/FR-038 (REVIEW gate: a coding task is never auto-COMPLETED, review_task approves/rejects it), AC-016/AC-017; FR-003/FR-006/FR-007 updated accordingly |
 
 ---
 
@@ -393,6 +398,7 @@ No success metrics beyond the Acceptance Criteria above were specified in the so
 * This Requirement captures the user's master prompt as given, without adding scope it did not specify. Numeric limits (retry counts, timeouts, concurrency) and third-party tool capabilities (Antigravity CLI, Muse4AI) are flagged under **Assumptions** rather than guessed.
 * The master prompt named one script `backup.ps1` (FR-022); the implementation uses `backup_config.ps1` instead, because `backup` alone is a reserved name under `02_Policies/Naming_Policy.md` "Reserved Names", which takes precedence over the source request per this repository's authority order.
 * "Muse4AI" was initially assumed to be a cloud video-generation API (AS-002 as originally drafted). It is actually a specific open-source local Windows app, github.com/andrew-babo/muse4ai, that automates the user's own Meta Muse web session and exposes a local REST+MCP API — the user identified it by its real repository URL after the initial (generic, guessed) adapter was built. `agents/muse/adapter.py` and FR-008 were corrected to match that repository's actual, documented API once identified.
+* The user supplied a follow-up specification ("PHÂN HỆ ANTIGRAVITY AGENT – AGENT THỰC THI KỸ THUẬT") defining the Antigravity Agent's role, 12-step task-assignment workflow, working rules, and a task-status vocabulary (PENDING/ASSIGNED/RUNNING/REVIEW/COMPLETED/FAILED/CANCELLED) differing from this Requirement's original (PENDING/QUEUED/RUNNING/WAITING/COMPLETED/FAILED/CANCELLED). After the user chose to fully adopt the new vocabulary, QUEUED was renamed to ASSIGNED and WAITING to REVIEW throughout the codebase, schema, dashboard, and this document (FR-003), and the REVIEW gate it implies for coding tasks was implemented as FR-037/FR-038. That follow-up spec's section 5 ("verify the CLI exists, supports headless execution, etc. before assuming any integration method — never assume an undocumented remote-control API") describes exactly the verification already performed for FR-007/AS-001.
 * Per `01_Rules/Global.md` ("AI assists; it does not own"), this document requires human review and approval before `Architecture.md` is created for this project.
 
 ---
@@ -405,3 +411,4 @@ No success metrics beyond the Acceptance Criteria above were specified in the so
 | 0.1.1   | 2026-11-15 |        | Identified Muse4AI as github.com/andrew-babo/muse4ai and corrected FR-008/AS-002/Dependencies accordingly; renamed `backup.ps1` to `backup_config.ps1` per Naming_Policy.md |
 | 0.1.2   | 2026-11-15 |        | Identified Antigravity's real headless CLI syntax and clarified the CLI-vs-Desktop-app distinction; updated AS-001/Dependencies |
 | 0.1.3   | 2026-11-15 |        | Added Publisher Agent (FR-033–FR-036, AS-005–AS-007, AC-013–AC-015) for YouTube/TikTok/Instagram, per a follow-up request deprioritizing coding in favor of video generation + publishing |
+| 0.1.4   | 2026-11-15 |        | Renamed task statuses (QUEUED→ASSIGNED, WAITING→REVIEW) and added the Antigravity REVIEW gate (FR-037/FR-038, review_task tool, AC-016/AC-017) per a follow-up "Antigravity Agent subsystem" spec |

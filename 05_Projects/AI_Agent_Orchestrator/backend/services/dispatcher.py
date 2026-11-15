@@ -1,4 +1,4 @@
-"""Dispatcher — wires a QUEUED task to the right agent adapter and runs it.
+"""Dispatcher — wires an ASSIGNED task to the right agent adapter and runs it.
 
 `agents/` lives as a sibling of `backend/` (Requirement.md FR-002), not as a
 subpackage of it, so the project root is added to sys.path here to import it.
@@ -49,9 +49,19 @@ def _run_sync(task) -> dict:
             )
         project_dir = config.PROJECTS_DIR / task.task_id
         instructions = task.payload.get("instructions") or task.description or task.task_name
-        return run_coding_task(
-            config.ANTIGRAVITY_CLI_PATH, project_dir, instructions, config.MAX_TASK_TIMEOUT_SECONDS
+        test_command = task.payload.get("test_command")
+        result = run_coding_task(
+            config.ANTIGRAVITY_CLI_PATH,
+            project_dir,
+            instructions,
+            config.MAX_TASK_TIMEOUT_SECONDS,
+            test_command=test_command,
         )
+        # Antigravity Agent subsystem rule: a coding task is never
+        # auto-COMPLETED — Claude must review it first (see review_task /
+        # POST /tasks/{id}/review). Reuses the same needs_review signal
+        # Muse4AI uses below, handled once in _attempt_once.
+        return {"needs_review": True, **result}
 
     if task.assigned_agent == "muse":
         # Real Muse4AI contract (Requirement.md AS-002, resolved — see
@@ -82,7 +92,7 @@ def _run_sync(task) -> dict:
         if job["status"] == "needs_review":
             # Documented behavior: a person must check it in Muse4AI — never
             # resubmit. Signaled back to _attempt_once via this flag so it is
-            # recorded as WAITING, not COMPLETED or FAILED.
+            # recorded as REVIEW, not COMPLETED or FAILED.
             return {"needs_review": True, "job_id": job_id, "outputs": job.get("outputs", [])}
 
         if job["status"] in ("failed", "cancelled"):
@@ -192,10 +202,10 @@ def _run_publisher_task(task) -> dict:
 
 
 async def dispatch_task(task_id: str) -> None:
-    """Run a QUEUED task to completion, retrying a failed Antigravity task up
-    to MAX_FIX_RETRIES times. Each attempt acquires the concurrency semaphore
-    independently — retrying from inside the held semaphore would deadlock,
-    since asyncio.Semaphore is not reentrant."""
+    """Run an ASSIGNED task to completion, retrying a failed Antigravity task
+    up to MAX_FIX_RETRIES times. Each attempt acquires the concurrency
+    semaphore independently — retrying from inside the held semaphore would
+    deadlock, since asyncio.Semaphore is not reentrant."""
     retries_left = config.MAX_FIX_RETRIES
     while await _attempt_once(task_id, retries_left):
         retries_left -= 1
@@ -205,7 +215,7 @@ async def _attempt_once(task_id: str, retries_left: int) -> bool:
     """Run a single attempt. Returns True if the caller should retry."""
     async with _semaphore:
         task = task_manager.get_task(task_id)
-        if task is None or task.status != TaskStatus.QUEUED.value:
+        if task is None or task.status != TaskStatus.ASSIGNED.value:
             return False
 
         agent = agent_manager.get_agent_by_type(task.assigned_agent)
@@ -218,10 +228,11 @@ async def _attempt_once(task_id: str, retries_left: int) -> bool:
                 asyncio.to_thread(_run_sync, task), timeout=config.MAX_TASK_TIMEOUT_SECONDS
             )
             if result.get("needs_review"):
-                # Muse4AI flagged the job for manual review — not success, not
-                # failure, and never retried (see agents/muse/adapter.py).
-                task_manager.update_task_status(task_id, TaskStatus.WAITING, result=result)
-                logger.info("Task %s needs human review in Muse4AI", task_id)
+                # Muse4AI flagged a job for manual review, or (always) an
+                # Antigravity coding task awaiting Claude's review — not
+                # success, not failure, and never auto-retried.
+                task_manager.update_task_status(task_id, TaskStatus.REVIEW, result=result)
+                logger.info("Task %s is in REVIEW", task_id)
                 return False
             task_manager.update_task_status(
                 task_id, TaskStatus.COMPLETED, result=result, output_path=result.get("output_path")
@@ -235,7 +246,7 @@ async def _attempt_once(task_id: str, retries_left: int) -> bool:
 
             if retries_left > 0 and task.assigned_agent == "antigravity":
                 logger.info("Retrying task %s (%d retries left)", task_id, retries_left)
-                task_manager.update_task_status(task_id, TaskStatus.QUEUED)
+                task_manager.update_task_status(task_id, TaskStatus.ASSIGNED)
                 return True
 
             task_manager.update_task_status(task_id, TaskStatus.FAILED, error_message=str(exc))
