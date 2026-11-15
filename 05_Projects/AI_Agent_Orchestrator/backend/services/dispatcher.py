@@ -18,7 +18,7 @@ from models import AgentStatus, TaskStatus  # noqa: E402
 from services import agent_manager, task_manager  # noqa: E402
 
 from agents.antigravity.adapter import AntigravityError, check_cli_available, run_coding_task  # noqa: E402
-from agents.muse.adapter import Muse4AIError, submit_video  # noqa: E402
+from agents.muse.adapter import Muse4AIError, download_output, get_job, submit_video  # noqa: E402
 from agents.python.adapter import run_automation  # noqa: E402
 from agents.qa.adapter import check_task_output  # noqa: E402
 
@@ -41,6 +41,9 @@ def _run_sync(task) -> dict:
         )
 
     if task.assigned_agent == "muse":
+        # Real Muse4AI contract (Requirement.md AS-002, resolved — see
+        # agents/muse/adapter.py docstring): POST /v1/jobs takes only kind,
+        # prompt, repeat and account for a video — no duration/resolution.
         prompt = task.payload.get("prompt") or task.description or task.task_name
         duplicate = next(
             (
@@ -52,9 +55,30 @@ def _run_sync(task) -> dict:
         )
         if duplicate is not None:
             raise Muse4AIError(f"Duplicate video request blocked — already running as {duplicate.task_id}")
-        extra_params = {k: v for k, v in task.payload.items() if k != "prompt"}
-        job_id = submit_video(config.MUSE4AI_BASE_URL, config.MUSE4AI_API_KEY, prompt, **extra_params)
-        return {"job_id": job_id, "status": "submitted"}
+
+        repeat = task.payload.get("repeat", 1)
+        account = task.payload.get("account", "auto")
+        job = submit_video(config.MUSE4AI_BASE_URL, config.MUSE4AI_API_KEY, prompt, repeat=repeat, account=account)
+        job_id = job["id"]
+
+        # Muse4AI's own `wait` query param long-polls for a status change;
+        # looping on it is the documented way to track a job to completion.
+        while job["status"] in ("queued", "running"):
+            job = get_job(config.MUSE4AI_BASE_URL, config.MUSE4AI_API_KEY, job_id, wait_seconds=20)
+
+        if job["status"] == "needs_review":
+            # Documented behavior: a person must check it in Muse4AI — never
+            # resubmit. Signaled back to _attempt_once via this flag so it is
+            # recorded as WAITING, not COMPLETED or FAILED.
+            return {"needs_review": True, "job_id": job_id, "outputs": job.get("outputs", [])}
+
+        if job["status"] in ("failed", "cancelled"):
+            message = (job.get("error") or {}).get("message") or f"Muse4AI job ended with status={job['status']}"
+            raise Muse4AIError(message)
+
+        outputs = job.get("outputs", [])
+        output_path = download_output(outputs[0], str(config.OUTPUT_DIR / "videos")) if outputs else None
+        return {"job_id": job_id, "status": job["status"], "outputs": outputs, "output_path": output_path}
 
     if task.assigned_agent == "python":
         return run_automation(task.payload)
@@ -96,6 +120,12 @@ async def _attempt_once(task_id: str, retries_left: int) -> bool:
             result = await asyncio.wait_for(
                 asyncio.to_thread(_run_sync, task), timeout=config.MAX_TASK_TIMEOUT_SECONDS
             )
+            if result.get("needs_review"):
+                # Muse4AI flagged the job for manual review — not success, not
+                # failure, and never retried (see agents/muse/adapter.py).
+                task_manager.update_task_status(task_id, TaskStatus.WAITING, result=result)
+                logger.info("Task %s needs human review in Muse4AI", task_id)
+                return False
             task_manager.update_task_status(
                 task_id, TaskStatus.COMPLETED, result=result, output_path=result.get("output_path")
             )

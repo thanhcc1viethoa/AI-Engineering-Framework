@@ -11,7 +11,8 @@ Cần có trên máy Windows:
 
 * Python 3.10+ và pip
 * Node.js 18+ và npm
-* (Tùy chọn, để dùng thật agent code/video) Antigravity CLI đã đăng nhập, tài khoản Muse4AI
+* (Tùy chọn, để dùng thật agent code) Antigravity CLI đã đăng nhập
+* (Tùy chọn, để dùng thật agent video) Ứng dụng [Muse4AI](https://muse4ai.andrewbabo.com) đã cài và đăng nhập tài khoản Meta Muse của bạn — đây là app chạy ngay trên máy bạn (cổng mặc định `127.0.0.1:47821`), không phải một tài khoản cloud riêng
 * Claude Desktop đã cài
 
 Lấy code về máy (mở PowerShell hoặc Git Bash):
@@ -116,7 +117,7 @@ Bạn **chat bình thường bằng tiếng Việt** với Claude Desktop, Claud
 * "Giao cho Antigravity viết một hàm Python tính giai thừa, lưu vào dự án demo."
 * "Hệ thống đang có bao nhiêu task đang chạy?"
 * "Task `task-xxxx` xong chưa, kết quả ra sao?"
-* "Tạo một video 10 giây về biển hoàng hôn."
+* "Tạo một video về biển hoàng hôn." (Muse tự quyết định thời lượng/độ phân giải — không có tham số chỉnh những thứ này)
 * "Hủy task `task-xxxx` đi."
 
 Claude sẽ gọi đúng tool tương ứng (`submit_task`, `get_system_status`, `get_task_result`, `create_video`, `cancel_task`...) và trả lời bạn bằng ngôn ngữ tự nhiên dựa trên kết quả thật nhận về.
@@ -149,5 +150,6 @@ Chưa có script tự động bật — theo đúng thiết kế, việc này c�
 
 ## Giới hạn hiện tại cần biết
 
-* **Antigravity và Muse4AI**: code đã viết nhưng chưa test được với CLI/API thật (tôi không có hai thứ đó trong môi trường code). Lần đầu bạn giao task cho hai agent này, nhiều khả năng sẽ cần chỉnh lại cú pháp lệnh trong `agents/antigravity/adapter.py` hoặc endpoint trong `agents/muse/adapter.py` cho khớp thực tế — báo lỗi cho tôi để sửa.
+* **Antigravity**: code đã viết nhưng chưa test được với CLI thật (môi trường code không có `agy`). Lần đầu giao task cho agent này, nhiều khả năng cần chỉnh lại cú pháp lệnh trong `agents/antigravity/adapter.py` cho khớp thực tế — báo lỗi cho tôi để sửa.
+* **Muse4AI**: adapter (`agents/muse/adapter.py`) đã được viết đúng theo tài liệu API thật của [github.com/andrew-babo/muse4ai](https://github.com/andrew-babo/muse4ai) (không còn là đoán), có test giả lập xác nhận gửi/nhận đúng định dạng. Vẫn **chưa chạy được với app Muse4AI thật** (cần máy Windows có cài app + tài khoản Muse đăng nhập) — lần đầu dùng thật, báo lại lỗi (nếu có) để tôi đối chiếu với tài liệu và sửa.
 * **6 script PowerShell**: viết cẩn thận nhưng chưa chạy thử thật lần nào (môi trường code không có Windows).

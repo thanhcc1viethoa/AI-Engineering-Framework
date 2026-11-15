@@ -297,25 +297,28 @@ Quy trình `agents/antigravity/`:
 
 ---
 
-# 9. GIAI ĐOẠN 6 — Tích hợp Muse4AI / Meta Muse (FR-008)
+# 9. GIAI ĐOẠN 6 — Tích hợp Muse4AI (FR-008)
 
-**Trước khi viết code thật:** đọc tài liệu Muse4AI chính thức mới nhất và thông tin tài khoản thật của người dùng để xác nhận AS-002 (endpoint, tham số, hạn mức). Không đoán URL/tham số.
+**Muse4AI là gì (đã xác minh, không còn là giả định):** `github.com/andrew-babo/muse4ai` — một ứng dụng Windows mã nguồn mở, **chạy ngay trên máy của người dùng**, tự động hóa phiên đăng nhập Meta Muse thật của họ qua trình duyệt, và lộ ra một API REST + MCP cục bộ. Đây **không phải** một API đám mây chính thức của Meta — tài liệu đầy đủ nằm trong chính repo đó (`desktop/src/shared/api/openapi.ts`, `agent-kit/muse4ai/references/*.md`).
 
-Khung adapter đề xuất (`agents/muse/`):
+Thông tin kết nối thật:
 
-```python
-def submit_video(prompt: str, **params) -> str:
-    """Gửi yêu cầu tạo video, trả về job_id. Ngăn gửi trùng: kiểm tra
-    task đang PENDING/QUEUED/RUNNING với cùng prompt trước khi gửi mới."""
+* Địa chỉ mặc định: `http://127.0.0.1:47821/v1` (đổi được trong Settings của app Muse4AI).
+* Xác thực: header `Authorization: Bearer msk_...` (tạo key trong app, mục Settings › API & agent).
+* `POST /v1/jobs` body: `{"kind": "video", "prompt": "...", "repeat"?: 1-4, "account"?: "auto"|tên-account}` — **không có** tham số thời lượng/độ phân giải/style, Muse tự quyết định.
+* Trả về `202 {"jobs": [Job, ...]}` — là **mảng** (vì `repeat` có thể tạo nhiều job một lần).
+* `Job.status`: `queued → running → succeeded | failed | cancelled | needs_review`. `needs_review` nghĩa là cần người kiểm tra thủ công trong app Muse4AI — **không được tự gửi lại**.
+* `GET /v1/jobs/{id}?wait=N` — long-poll tới khi đổi trạng thái.
+* `Job.outputs[].download_url` — link tải có chữ ký, sống 60 phút, không cần key.
 
-def get_job_status(job_id: str) -> dict:
-    """Trả về trạng thái job thật từ Muse4AI (không suy đoán tiến độ)."""
+Adapter thật đã viết sẵn (`agents/muse/adapter.py`): `submit_video()`, `get_job()`, `cancel_job()`, `download_output()` — khớp chính xác theo OpenAPI thật ở trên, có test giả lập (`agents/muse/test_adapter.py`) xác nhận request/response đúng hình dạng tài liệu.
 
-def download_video(job_id: str, dest_dir: str = "../../output/videos") -> str:
-    """Tải video khi job hoàn tất và API hỗ trợ tải xuống; trả về đường dẫn file."""
-```
+**Việc còn lại cho Giai đoạn 6 thật (trên máy Windows có Muse4AI + tài khoản Muse thật):**
 
-Ghi log thời gian submit → complete, lỗi API, và không gửi nhiều request tạo video trùng lặp cho cùng một yêu cầu (quy tắc business rule trong `Requirement.md`).
+1. Cài Muse4AI (`muse4ai.andrewbabo.com/download`), đăng nhập tài khoản Muse.
+2. Tạo API key trong app, điền vào `config\.env`: `MUSE4AI_API_KEY=msk_...` (giữ `MUSE4AI_BASE_URL` mặc định nếu không đổi cổng).
+3. Gọi `create_video` qua MCP hoặc tạo task `assigned_agent=muse` trên Dashboard, xác nhận job thật chạy qua `queued → running → succeeded` và video tải về `output/videos/`.
+4. Nếu gặp `needs_review`, vào app Muse4AI kiểm tra thủ công — đây là hành vi đúng theo thiết kế, không phải lỗi.
 
 ---
 

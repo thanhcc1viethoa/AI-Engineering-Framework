@@ -18,8 +18,10 @@ MCP_PORT = int(os.getenv("MCP_PORT", "8765"))
 
 SQLITE_PATH = str(_PROJECT_ROOT / "database" / os.getenv("SQLITE_FILENAME", "orchestrator.db"))
 
+# Muse4AI (https://muse4ai.andrewbabo.com) runs locally on the same Windows
+# PC, alongside this Orchestrator — hence the 127.0.0.1 default.
 MUSE4AI_API_KEY = os.getenv("MUSE4AI_API_KEY", "")
-MUSE4AI_BASE_URL = os.getenv("MUSE4AI_BASE_URL", "")
+MUSE4AI_BASE_URL = os.getenv("MUSE4AI_BASE_URL", "http://127.0.0.1:47821/v1")
 
 ANTIGRAVITY_CLI_PATH = os.getenv("ANTIGRAVITY_CLI_PATH", "agy")
 

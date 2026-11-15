@@ -12,7 +12,7 @@
 | -------------- | -------------------------------------- |
 | Project Name   | AI_Agent_Orchestrator                  |
 | Requirement ID | REQ-001                                |
-| Version        | 0.1.0                                  |
+| Version        | 0.1.1                                  |
 | Status         | Draft                                  |
 | Author         |                                        |
 | Owner          |                                        |
@@ -131,7 +131,7 @@ No Compliance Requirements were specified in the source request.
 | FR-005 | Implement a Workflow Manager that decomposes one incoming request into an ordered set of tasks, assigns each task to the appropriate agent, and supports sequential execution plus parallel execution for independent tasks. | Functional | Critical | | User Request | Draft |
 | FR-006 | Implement an MCP Server exposing exactly these tools to Claude Desktop, each with a documented description, parameters, types, and return schema, implementing only functionality that is actually built: `submit_task`, `get_task_status`, `get_task_result`, `list_tasks`, `cancel_task`, `get_agent_status`, `list_agents`, `execute_workflow`, `create_video`, `get_video_status`, `get_system_status`. | Technical | Critical | | User Request | Draft |
 | FR-007 | Integrate the Antigravity CLI as the coding/execution agent: verify installation and login, verify current CLI syntax/parameters, use its non-interactive mode if supported, dispatch tasks from Python, receive structured results, log execution, track duration, handle timeouts and errors, and allow a controlled re-run of a failed task. Each task is scoped to an authorized project directory; Antigravity's full permission-bypass mode shall not be used. | Technical | High | | User Request | Draft |
-| FR-008 | Integrate Muse4AI/Meta Muse as the video agent via its officially documented API/MCP: verify connection and status, submit a video-generation request, receive a job ID, poll status, download the completed video into `output/videos` when the API supports it, and log errors and duration. Duplicate concurrent video-generation submissions for the same request shall be prevented. | Technical | High | | User Request | Draft |
+| FR-008 | Integrate Muse4AI (github.com/andrew-babo/muse4ai — a local, unofficial Windows app that automates the user's own signed-in Meta Muse session; not a Meta cloud API) as the video agent via its documented local REST API (`http://127.0.0.1:47821/v1`): verify connection (`GET /v1/status`), submit a video-generation request (`POST /v1/jobs`), receive a job id, poll status, download the completed output when `succeeded`, and log errors and duration. Duplicate concurrent video-generation submissions for the same request shall be prevented. A `needs_review` job status shall be surfaced for human review, never auto-retried. | Technical | High | | User Request | Draft |
 | FR-009 | Implement a Python Automation Agent that executes automation tasks dispatched by the Orchestrator and returns a structured result. | Functional | Medium | | User Request | Draft |
 | FR-010 | Implement a QA Agent that inspects the output of a completed task or workflow step and returns a pass/fail quality verdict before Claude finalizes its report. | Functional | High | | User Request | Draft |
 | FR-011 | Connect Claude Desktop to the Orchestrator exclusively through the MCP Server tools defined in FR-006. | Technical | Critical | | User Request | Draft |
@@ -241,7 +241,7 @@ Rules:
 | ID     | Assumption | Validation Status | Validation Method | Validation Date | Reviewer |
 | ------ | ---------- | ------------------ | ------------------ | ----------------- | -------- |
 | AS-001 | The Google Antigravity CLI (`agy`) exists on the target machine, is licensed/logged in, and supports a non-interactive/headless execution mode suitable for programmatic dispatch. | Unvalidated | Inspection (Phase 1 survey) + Demonstration (Phase 5) | | |
-| AS-002 | Muse4AI exposes an officially documented API/MCP with account-specific quotas (video count, duration, resolution, rate limits) sufficient for this project's needs. | Unvalidated | Inspection of the user's account + official documentation (Phase 6) | | |
+| AS-002 | Muse4AI's API contract is as documented in its own public repository (github.com/andrew-babo/muse4ai: REST + MCP on `http://127.0.0.1:47821`, `POST /v1/jobs` with `{kind, prompt, repeat, account}` — no duration/resolution/style parameter — returning `{jobs: [...]}`, job statuses `queued/running/needs_review/succeeded/failed/cancelled`). | Partially validated — the adapter (`agents/muse/adapter.py`) was rewritten against that repository's actual OpenAPI document (`desktop/src/shared/api/openapi.ts`) and `agent-kit/muse4ai/references/*.md`, and tested against a mock server replaying that exact contract (`agents/muse/test_adapter.py`). Still unverified: real runtime behavior against a live Muse4AI instance with a signed-in Muse account, and account-specific quotas — Muse4AI is itself an unofficial automation of Meta's web UI, so its real-world reliability depends on Meta's site not changing. | Code review against the real repo (done, 2026-11-15) + a live run on the user's Windows machine (pending) | 2026-11-15 (partial) | |
 | AS-003 | The target Windows machine's actual specifications (OS build, CPU, RAM, free disk space on the install drive, installed Python/Node versions, existing MCP Server configurations, running services) are unknown to this session. This Claude Code session runs in an isolated cloud container with no filesystem or network access to the user's Windows machine, and no Remote Control connection to it is currently established. | Unvalidated | User executes the Phase 1 PowerShell survey script locally and returns its output | | |
 | AS-004 | Numeric bounds for maximum fix-retry count, maximum task execution time, and maximum concurrent tasks (FR-021) are not specified in the source request. | Unvalidated | To be defined in Architecture.md and confirmed with the user | | |
 
@@ -263,7 +263,7 @@ Rules:
 | Dependency | Type | Notes |
 | ---------- | ---- | ----- |
 | Google Antigravity CLI (`agy`) | External tool | Availability/capabilities unverified — see AS-001 |
-| Muse4AI / Meta Muse account and API/MCP | External service | Availability/quotas unverified — see AS-002 |
+| Muse4AI (github.com/andrew-babo/muse4ai) + a signed-in Meta Muse account | External local app (unofficial, MIT-licensed, runs on the user's own PC) | API contract confirmed from its public source; live behavior/quotas unverified — see AS-002 |
 | Claude Desktop | External application | Runs on the user's Windows machine |
 | Python + pip | Runtime prerequisite | Presence/version confirmed in Phase 1 |
 | Node.js + npm | Runtime prerequisite | Presence/version confirmed in Phase 1 |
@@ -346,6 +346,7 @@ No success metrics beyond the Acceptance Criteria above were specified in the so
 | Version | Date | Author | Summary |
 | ------- | ---- | ------ | ------- |
 | 0.1.0 | 2026-11-15 | | Initial draft from the user's master prompt |
+| 0.1.1 | 2026-11-15 | | Corrected FR-008/AS-002/Dependencies: Muse4AI identified as github.com/andrew-babo/muse4ai (local app, not a cloud API); renamed FR-022's `backup.ps1` to `backup_config.ps1` (Naming_Policy.md reserved name) |
 
 ---
 
@@ -370,6 +371,7 @@ No success metrics beyond the Acceptance Criteria above were specified in the so
 
 * This Requirement captures the user's master prompt as given, without adding scope it did not specify. Numeric limits (retry counts, timeouts, concurrency) and third-party tool capabilities (Antigravity CLI, Muse4AI) are flagged under **Assumptions** rather than guessed.
 * The master prompt named one script `backup.ps1` (FR-022); the implementation uses `backup_config.ps1` instead, because `backup` alone is a reserved name under `02_Policies/Naming_Policy.md` "Reserved Names", which takes precedence over the source request per this repository's authority order.
+* "Muse4AI" was initially assumed to be a cloud video-generation API (AS-002 as originally drafted). It is actually a specific open-source local Windows app, github.com/andrew-babo/muse4ai, that automates the user's own Meta Muse web session and exposes a local REST+MCP API — the user identified it by its real repository URL after the initial (generic, guessed) adapter was built. `agents/muse/adapter.py` and FR-008 were corrected to match that repository's actual, documented API once identified.
 * Per `01_Rules/Global.md` ("AI assists; it does not own"), this document requires human review and approval before `Architecture.md` is created for this project.
 
 ---
@@ -379,3 +381,4 @@ No success metrics beyond the Acceptance Criteria above were specified in the so
 | Version | Date       | Author | Notes |
 | ------- | ---------- | ------ | ----- |
 | 0.1.0   | 2026-11-15 |        | Initial draft requirement for AI_Agent_Orchestrator, derived from the user's master prompt |
+| 0.1.1   | 2026-11-15 |        | Identified Muse4AI as github.com/andrew-babo/muse4ai and corrected FR-008/AS-002/Dependencies accordingly; renamed `backup.ps1` to `backup_config.ps1` per Naming_Policy.md |

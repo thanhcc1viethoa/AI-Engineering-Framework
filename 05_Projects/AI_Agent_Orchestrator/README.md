@@ -12,7 +12,7 @@ A Windows-hosted multi-agent orchestration system: Claude manages, Antigravity C
 | MCP Server (`mcp_server/`) | Implemented — all 11 tools verified end-to-end against a running backend |
 | Dashboard (`frontend/`) | Implemented — all 7 pages verified in a real browser (Playwright), builds cleanly |
 | Antigravity adapter (`agents/antigravity/`) | Code written, **not verified against a real `agy` CLI** — see AS-001 |
-| Muse4AI adapter (`agents/muse/`) | Code written, **not verified against a real Muse4AI account** — see AS-002 |
+| Muse4AI adapter (`agents/muse/`) | Rewritten against Muse4AI's real, public API contract ([github.com/andrew-babo/muse4ai](https://github.com/andrew-babo/muse4ai)) and verified against a mock server replaying it — **not yet run against a live Muse4AI instance** (needs the user's Windows PC + a signed-in Muse account). See AS-002. |
 | Windows scripts (`scripts/*.ps1`) | Written, **not executed** — no Windows/PowerShell available in this build environment |
 
 This was built in a Linux cloud container with no access to the target Windows
@@ -35,7 +35,7 @@ run on the target machine to confirm.
 | `frontend/` | React web dashboard (7 pages) |
 | `mcp_server/` | MCP tools exposed to Claude Desktop |
 | `agents/antigravity/` | Adapter to the Antigravity CLI (coding agent) |
-| `agents/muse/` | Adapter to Muse4AI / Meta Muse (video agent) |
+| `agents/muse/` | Adapter to [Muse4AI](https://github.com/andrew-babo/muse4ai) (local app that automates the user's own Meta Muse session; video agent) |
 | `agents/python/` | Python automation agent |
 | `agents/qa/` | QA agent |
 | `workflows/` | Stored workflow (task graph) definitions |

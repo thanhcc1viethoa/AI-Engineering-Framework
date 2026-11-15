@@ -178,43 +178,43 @@ def execute_workflow(workflow_name: str, goal: str, steps: list[dict]) -> dict:
 
 @mcp.tool(
     description=(
-        "Submit a video-generation request to the Muse Agent (Muse4AI/Meta Muse). "
-        "duration_seconds/resolution/style are passed through as given — Muse4AI's exact "
-        "accepted values are unverified (Requirement.md AS-002); confirm them before relying "
-        "on this in production."
+        "Submit a video-generation request to the Muse Agent (Muse4AI, a local app that "
+        "automates the user's own Meta Muse session — see github.com/andrew-babo/muse4ai). "
+        "Per Muse4AI's real API there is no duration/resolution/style parameter: Muse decides "
+        "those. `repeat` (1-4) submits that many variations in one call; `account` picks a "
+        "specific Muse account alias configured in the app, or 'auto' (default)."
     )
 )
-def create_video(
-    prompt: str,
-    duration_seconds: Optional[int] = None,
-    resolution: Optional[str] = None,
-    style: Optional[str] = None,
-) -> dict:
-    payload = {"prompt": prompt}
-    if duration_seconds is not None:
-        payload["duration_seconds"] = duration_seconds
-    if resolution is not None:
-        payload["resolution"] = resolution
-    if style is not None:
-        payload["style"] = style
+def create_video(prompt: str, repeat: int = 1, account: str = "auto") -> dict:
     return _call(
         "POST",
         "/tasks",
-        json={"task_name": f"create_video: {prompt[:40]}", "assigned_agent": "muse", "payload": payload},
+        json={
+            "task_name": f"create_video: {prompt[:40]}",
+            "assigned_agent": "muse",
+            "payload": {"prompt": prompt, "repeat": repeat, "account": account},
+        },
     )
 
 
-@mcp.tool(description="Check a video-generation task's status (this is the same task_id create_video returned).")
+@mcp.tool(
+    description=(
+        "Check a video-generation task's status (this is the same task_id create_video "
+        "returned). A WAITING status means Muse4AI flagged the job for manual review — do "
+        "not resubmit; the user must check it inside the Muse4AI app."
+    )
+)
 def get_video_status(task_id: str) -> dict:
     task = _call("GET", f"/tasks/{task_id}")
     if "error" in task:
         return task
     if task["assigned_agent"] != "muse":
         return {"error": f"Task {task_id} is not a video task (assigned_agent={task['assigned_agent']})"}
+    result = task["result"] or {}
     return {
         "task_id": task["task_id"],
         "status": task["status"],
-        "job_id": (task["result"] or {}).get("job_id") if task["result"] else None,
+        "job_id": result.get("job_id"),
         "output_path": task["output_path"],
     }
 
