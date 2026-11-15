@@ -72,6 +72,7 @@ On Windows, `scripts/install.ps1` and `scripts/start.ps1` automate the backend/f
 
 ## Where to Start
 
+* **How to use the running system**: `Huong_Dan_Su_Dung.md` (Vietnamese).
 * Full requirements: `Requirement.md` (REQ-001).
 * Instructions to hand to Antigravity for implementation: `Antigravity_Build_Guide.md`.
 

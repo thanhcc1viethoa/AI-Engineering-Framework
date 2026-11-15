@@ -1,0 +1,153 @@
+# Hướng Dẫn Sử Dụng — AI Agent Orchestrator
+
+> Dành cho người vận hành (bạn), sau khi code đã có trên máy Windows.
+> Nếu phần cài đặt/khởi động dưới đây báo lỗi khác với mô tả, đó là vì các script PowerShell trong `scripts/` được viết trong môi trường không có Windows để chạy thử thật (xem `README.md` mục Status) — ghi lại lỗi và đưa cho Claude để sửa.
+
+---
+
+## 0. Trước khi bắt đầu
+
+Cần có trên máy Windows:
+
+* Python 3.10+ và pip
+* Node.js 18+ và npm
+* (Tùy chọn, để dùng thật agent code/video) Antigravity CLI đã đăng nhập, tài khoản Muse4AI
+* Claude Desktop đã cài
+
+Lấy code về máy (mở PowerShell hoặc Git Bash):
+
+```powershell
+git clone https://github.com/thanhcc1viethoa/AI-Engineering-Framework.git
+cd AI-Engineering-Framework
+git checkout ccr-af9e22f6-rhzlvb
+cd 05_Projects\AI_Agent_Orchestrator
+```
+
+(Nếu bạn muốn triển khai đúng theo thiết kế ban đầu ở `D:\AI_AGENT_SYSTEM`, copy toàn bộ thư mục `AI_Agent_Orchestrator` này sang đó sau khi clone.)
+
+---
+
+## 1. Cài đặt lần đầu
+
+```powershell
+.\scripts\install.ps1
+```
+
+Lệnh này sẽ: tạo virtual environment + cài thư viện cho `backend/` và `mcp_server/`, cài và build `frontend/`, và tự tạo file `config\.env` từ `config\.env.example` nếu chưa có.
+
+**Mở `config\.env` và điền ít nhất 2 dòng này** (bắt buộc để đăng nhập Dashboard và dùng MCP):
+
+```
+DASHBOARD_PASSWORD=<chọn một mật khẩu>
+DASHBOARD_JWT_SECRET=<một chuỗi ngẫu nhiên dài, ví dụ 32+ ký tự>
+```
+
+Các dòng khác (`MUSE4AI_API_KEY`, `ANTIGRAVITY_CLI_PATH`, ...) điền khi nào bạn thật sự dùng tới agent đó — để trống vẫn chạy được, chỉ riêng task gửi cho agent đó sẽ báo lỗi rõ ràng thay vì giả vờ chạy.
+
+---
+
+## 2. Khởi động hệ thống
+
+```powershell
+.\scripts\start.ps1
+```
+
+Script sẽ khởi động:
+
+* **Backend** tại `http://127.0.0.1:8000`
+* **Dashboard** tại `http://127.0.0.1:5173`
+
+Lưu ý: script này **không** khởi động `mcp_server` — Claude Desktop tự làm việc đó (xem mục 4).
+
+Kiểm tra backend sống chưa:
+
+```powershell
+curl http://127.0.0.1:8000/system/status
+```
+
+---
+
+## 3. Dùng qua Dashboard
+
+Mở trình duyệt vào `http://127.0.0.1:5173`, nhập mật khẩu bạn đặt ở `DASHBOARD_PASSWORD`.
+
+| Trang | Dùng để |
+| ----- | ------- |
+| **Tổng quan** | Xem nhanh số agent, số task đang chạy/xong/lỗi, số video — cập nhật realtime |
+| **Giám sát Agent** | Xem 5 agent (Claude, Antigravity, Muse, Python, QA) đang rảnh hay bận, lỗi gần nhất |
+| **Quản lý nhiệm vụ** | **Tự tạo task thủ công** (không cần qua Claude Desktop): chọn agent, nhập payload JSON, bấm "Tạo nhiệm vụ"; xem kết quả, dừng task đang chạy |
+| **Workflow** | Nhập `workflow_id` để xem sơ đồ các bước và trạng thái từng bước |
+| **Quản lý video** | Danh sách các task gửi cho Muse Agent |
+| **Log hệ thống** | Xem log backend trực tiếp, để debug khi có lỗi |
+| **Cài đặt** | Xem cấu hình hiện tại (chỉ xem — sửa thật trong `config\.env` rồi `restart.ps1`) |
+
+**Ví dụ tự tạo một task thử ở trang "Quản lý nhiệm vụ"** (không cần Antigravity/Muse4AI, dùng ngay được):
+- Tên nhiệm vụ: `Thử liệt kê thư mục`
+- Agent: `python`
+- Payload: `{"action": "list_directory", "path": "C:\\Users"}`
+
+Task sẽ chuyển từ QUEUED → RUNNING → COMPLETED trong vài giây, bấm "Xem kết quả" để thấy danh sách file thật.
+
+---
+
+## 4. Dùng qua Claude Desktop
+
+### Cấu hình một lần
+
+Mở file `%APPDATA%\Claude\claude_desktop_config.json`, thêm (không xóa entry khác nếu có):
+
+```json
+{
+  "mcpServers": {
+    "ai-agent-orchestrator": {
+      "command": "D:\\AI_AGENT_SYSTEM\\mcp_server\\.venv\\Scripts\\python.exe",
+      "args": ["D:\\AI_AGENT_SYSTEM\\mcp_server\\main.py"]
+    }
+  }
+}
+```
+
+(Sửa đường dẫn `D:\AI_AGENT_SYSTEM` thành nơi bạn thực sự đặt code.) Khởi động lại Claude Desktop. MCP server cần `config\.env` có `DASHBOARD_PASSWORD` để tự đăng nhập vào backend — nhớ backend (`start.ps1`) đã chạy trước đó.
+
+### Dùng hàng ngày
+
+Bạn **chat bình thường bằng tiếng Việt** với Claude Desktop, Claude sẽ tự quyết định gọi tool nào. Ví dụ:
+
+* "Giao cho Antigravity viết một hàm Python tính giai thừa, lưu vào dự án demo."
+* "Hệ thống đang có bao nhiêu task đang chạy?"
+* "Task `task-xxxx` xong chưa, kết quả ra sao?"
+* "Tạo một video 10 giây về biển hoàng hôn."
+* "Hủy task `task-xxxx` đi."
+
+Claude sẽ gọi đúng tool tương ứng (`submit_task`, `get_system_status`, `get_task_result`, `create_video`, `cancel_task`...) và trả lời bạn bằng ngôn ngữ tự nhiên dựa trên kết quả thật nhận về.
+
+---
+
+## 5. Dừng / khởi động lại
+
+```powershell
+.\scripts\stop.ps1       # dừng backend + dashboard
+.\scripts\restart.ps1    # dừng rồi khởi động lại — dùng sau khi sửa config\.env
+```
+
+---
+
+## 6. Tự khởi động cùng Windows (chỉ bật sau khi đã dùng ổn định)
+
+Chưa có script tự động bật — theo đúng thiết kế, việc này cần bạn xác nhận thủ công một lần (xem `Antigravity_Build_Guide.md` mục 13.2, hai lựa chọn: Task Scheduler hoặc NSSM). `scripts\health_check.ps1` dùng để tự phát hiện và khởi động lại khi hệ thống bị treo — chạy định kỳ qua Task Scheduler.
+
+---
+
+## 7. Khi gặp lỗi
+
+1. Xem trang **Log hệ thống** trên Dashboard, hoặc trực tiếp file `logs\orchestrator.log`.
+2. Chạy `.\scripts\health_check.ps1` để kiểm tra backend còn sống không.
+3. Nếu một task cụ thể bị `FAILED`, bấm "Xem kết quả" trong Quản lý nhiệm vụ để đọc `error_message` — thường nói rõ thiếu gì (ví dụ: "Antigravity CLI not available" nghĩa là chưa cài/đăng nhập `agy`, hoặc `ANTIGRAVITY_CLI_PATH` trong `.env` sai).
+4. Mang log/lỗi đó quay lại đây, tôi sẽ sửa code.
+
+---
+
+## Giới hạn hiện tại cần biết
+
+* **Antigravity và Muse4AI**: code đã viết nhưng chưa test được với CLI/API thật (tôi không có hai thứ đó trong môi trường code). Lần đầu bạn giao task cho hai agent này, nhiều khả năng sẽ cần chỉnh lại cú pháp lệnh trong `agents/antigravity/adapter.py` hoặc endpoint trong `agents/muse/adapter.py` cho khớp thực tế — báo lỗi cho tôi để sửa.
+* **6 script PowerShell**: viết cẩn thận nhưng chưa chạy thử thật lần nào (môi trường code không có Windows).
